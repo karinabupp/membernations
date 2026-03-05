@@ -32,10 +32,20 @@ const ISO_MAP = {
 const CONTINENTS = ["All Continents","South America","North America","Europe","Asia","Oceania","Africa","Middle East"];
 const STATUSES   = ["All Status","Member","Negotiating","Documentation","Needed"];
 const QUARTERS   = ["","Q1","Q2","Q3","Q4"];
-const GOAL       = 50;
+const GOAL       = 55;
 const TODAY      = new Date("2026-03-05");
 
 const fmt    = d => { if(!d) return "—"; const [y,m,dd]=d.split("-"); return `${dd}/${m}/${y}`; };
+
+// Auto-derive quarter from a date string (YYYY-MM-DD)
+function quarterFromDate(dateStr) {
+  if (!dateStr) return "";
+  const month = parseInt(dateStr.slice(5, 7), 10);
+  if (month <= 3)  return "Q1";
+  if (month <= 6)  return "Q2";
+  if (month <= 9)  return "Q3";
+  return "Q4";
+}
 const fmtMMM = d => { if(!d) return "—"; const dt=new Date(d+"T00:00:00"); return dt.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); };
 
 function calcVig(inicio, fim) {
@@ -163,7 +173,7 @@ const INIT = [
   },
   {
     id:9, country:"Canada", continent:"North America", empresa:"CWF", memberStatus:"Member",
-    quarter:"Q1", inicio:"2025-06-01", fim:"2026-06-01", rep:"Sarah Lee", email:"s@cwf.ca", tel:"+1 416 000",
+    quarter:"Q2", inicio:"2025-06-01", fim:"2026-06-01", rep:"Sarah Lee", email:"s@cwf.ca", tel:"+1 416 000",
     statusHistory:[
       {id:"h9a", date:"2025-06-01", fromStatus:"", toStatus:"Member"},
     ]
@@ -211,7 +221,7 @@ function StaircaseBlock({ data, onStepClick }) {
         <div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
             <Target size={15} color="#6366f1"/>
-            <h2 style={{fontSize:14,fontWeight:700,margin:0}}>Path to 50 Federations</h2>
+            <h2 style={{fontSize:14,fontWeight:700,margin:0}}>Path to 55 Federations</h2>
           </div>
           <p style={{fontSize:11,color:"#9ca3af",margin:0}}>Quarterly member acquisition target · Click a step to see records</p>
         </div>
@@ -355,8 +365,7 @@ function EditModal({ row, onClose, onSave }) {
             {k:"continent",   label:"Continent",  type:"select",opts:CONTINENTS.slice(1)},
             {k:"empresa",     label:"Company",    type:"text"},
             {k:"memberStatus",label:"Status",     type:"select",opts:Object.keys(STATUS_CFG)},
-            {k:"quarter",     label:"Quarter",    type:"select",opts:QUARTERS},
-            {k:"inicio",      label:"Start Date", type:"date"},
+            {k:"inicio",      label:"Start Date (sets Quarter)", type:"date"},
             {k:"fim",         label:"End Date",   type:"date"},
           ].map(({k,label,type,opts})=>(
             <div key={k}>
@@ -365,11 +374,21 @@ function EditModal({ row, onClose, onSave }) {
                 ?<select value={f[k]||""} onChange={e=>set(k,e.target.value)} style={{width:"100%",border:"1px solid #e5e7eb",borderRadius:8,padding:"7px 10px",fontSize:13,background:"#fff"}}>
                   {(opts||[]).map(o=><option key={o} value={o}>{o||"—"}</option>)}
                 </select>
-                :<input type={type} value={f[k]||""} onChange={e=>set(k,e.target.value)}
+                :<input type={type} value={f[k]||""} onChange={e=>{
+                    set(k,e.target.value);
+                    if(k==="inicio") set("quarter", quarterFromDate(e.target.value));
+                  }}
                   style={{width:"100%",border:"1px solid #e5e7eb",borderRadius:8,padding:"7px 10px",fontSize:13,boxSizing:"border-box"}}/>
               }
             </div>
           ))}
+          {/* Quarter display — auto-derived, read-only */}
+          <div>
+            <label style={{fontSize:10,color:"#9ca3af",fontWeight:700,display:"block",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>Quarter (auto)</label>
+            <div style={{border:"1px solid #f3f4f6",borderRadius:8,padding:"7px 10px",fontSize:13,background:"#f9fafb",color:f.quarter?"#6366f1":"#c4c9d4",fontWeight:f.quarter?700:400}}>
+              {f.quarter || "— set Start Date"}
+            </div>
+          </div>
         </div>
         {v.status&&(
           <div style={{background:"#f9fafb",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
@@ -583,7 +602,10 @@ function DashboardTab({ data, setData }) {
     return true;
   }),[data,sfilt,cfilt]);
 
-  const save=(updated)=>setData(p=>p.map(c=>c.id===updated.id?updated:c));
+  const save=(updated)=>setData(p=>p.map(c=>c.id===updated.id?{
+    ...updated,
+    quarter: updated.inicio ? quarterFromDate(updated.inicio) : updated.quarter
+  }:c));
   const addRow=()=>{
     const id=Date.now();
     const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",statusHistory:[]};
@@ -745,7 +767,10 @@ function DataTab({ data, setData }) {
     return true;
   }),[data,sfilt,cfilt,search]);
 
-  const save = (updated) => setData(p=>p.map(c=>c.id===updated.id?updated:c));
+  const save = (updated) => setData(p=>p.map(c=>c.id===updated.id?{
+    ...updated,
+    quarter: updated.inicio ? quarterFromDate(updated.inicio) : updated.quarter
+  }:c));
   const del  = (id)      => setData(p=>p.filter(c=>c.id!==id));
 
   const toggleExpand = (id) => setExpanded(prev=>{
@@ -838,7 +863,7 @@ function DataTab({ data, setData }) {
                             :c.key==="continent"
                             ?<EditableCell value={row[c.key]} type="select" opts={CONTINENTS.slice(1)} onChange={val=>save({...row,[c.key]:val})}/>
                             :c.key==="quarter"
-                            ?<EditableCell value={row[c.key]} type="select" opts={QUARTERS} onChange={val=>save({...row,[c.key]:val})}/>
+                            ?<span style={{fontSize:12,fontWeight:700,color:row[c.key]?"#6366f1":"#d1d5db",padding:"3px 4px",display:"block"}} title="Auto-derived from Start date">{row[c.key]||"—"}</span>
                             :c.key==="inicio"||c.key==="fim"
                             ?<EditableCell value={row[c.key]} type="date" onChange={val=>save({...row,[c.key]:val})}/>
                             :<EditableCell value={row[c.key]} onChange={val=>save({...row,[c.key]:val})}/>
