@@ -110,7 +110,7 @@ function buildChartData(data) {
 const INIT = [
   {
     id:1, country:"Brazil", continent:"South America", empresa:"CBTH", memberStatus:"Member",
-    quarter:"Q1", inicio:"2026-03-04", fim:"2026-07-29", rep:"João Silva", email:"joao@cbth.com", tel:"+55 11 9999-0001",
+    quarter:"Q1", inicio:"2026-03-04", fim:"2026-07-29", rep:"João Silva", email:"joao@cbth.com", tel:"+55 11 9999-0001", tournament:"WPF South America Open 2026",
     statusHistory:[
       {id:"h1a", date:"2025-08-01", fromStatus:"",            toStatus:"Negotiating"},
       {id:"h1b", date:"2025-11-15", fromStatus:"Negotiating", toStatus:"Documentation"},
@@ -119,14 +119,14 @@ const INIT = [
   },
   {
     id:2, country:"England", continent:"Europe", empresa:"", memberStatus:"Needed",
-    quarter:"", inicio:"", fim:"", rep:"", email:"", tel:"",
+    quarter:"", inicio:"", fim:"", rep:"", email:"", tel:"", tournament:"",
     statusHistory:[
       {id:"h2a", date:"2025-09-01", fromStatus:"", toStatus:"Needed"},
     ]
   },
   {
     id:3, country:"Australia", continent:"Oceania", empresa:"MGM", memberStatus:"Negotiating",
-    quarter:"", inicio:"", fim:"", rep:"Mike Chen", email:"m@mgm.au", tel:"+61 2 0000-0003",
+    quarter:"", inicio:"", fim:"", rep:"Mike Chen", email:"m@mgm.au", tel:"+61 2 0000-0003", tournament:"",
     statusHistory:[
       {id:"h3a", date:"2025-07-01", fromStatus:"",            toStatus:"Needed"},
       {id:"h3b", date:"2025-10-01", fromStatus:"Needed",      toStatus:"Negotiating"},
@@ -134,7 +134,7 @@ const INIT = [
   },
   {
     id:4, country:"Taiwan", continent:"Asia", empresa:"MGM 2", memberStatus:"Documentation",
-    quarter:"", inicio:"", fim:"", rep:"Li Wei", email:"l@mgm2.tw", tel:"+886 2 0000",
+    quarter:"", inicio:"", fim:"", rep:"Li Wei", email:"l@mgm2.tw", tel:"+886 2 0000", tournament:"",
     statusHistory:[
       {id:"h4a", date:"2025-09-15", fromStatus:"",            toStatus:"Negotiating"},
       {id:"h4b", date:"2025-12-01", fromStatus:"Negotiating", toStatus:"Documentation"},
@@ -142,7 +142,7 @@ const INIT = [
   },
   {
     id:5, country:"Mexico", continent:"North America", empresa:"CTP", memberStatus:"Member",
-    quarter:"Q1", inicio:"2026-03-04", fim:"2026-03-31", rep:"Carlos Torres", email:"c@ctp.mx", tel:"+52 55 0000",
+    quarter:"Q1", inicio:"2026-03-04", fim:"2026-03-31", rep:"Carlos Torres", email:"c@ctp.mx", tel:"+52 55 0000", tournament:"WPF Mexico Classic 2026",
     statusHistory:[
       {id:"h5a", date:"2025-06-01", fromStatus:"",            toStatus:"Negotiating"},
       {id:"h5b", date:"2025-11-01", fromStatus:"Negotiating", toStatus:"Member"},
@@ -150,7 +150,7 @@ const INIT = [
   },
   {
     id:6, country:"Israel", continent:"Middle East", empresa:"fake", memberStatus:"Member",
-    quarter:"Q1", inicio:"2026-03-01", fim:"2026-03-03", rep:"David Levi", email:"d@fake.il", tel:"+972 3 0000",
+    quarter:"Q1", inicio:"2026-03-01", fim:"2026-03-03", rep:"David Levi", email:"d@fake.il", tel:"+972 3 0000", tournament:"",
     statusHistory:[
       {id:"h6a", date:"2025-10-01", fromStatus:"",            toStatus:"Negotiating"},
       {id:"h6b", date:"2026-02-01", fromStatus:"Negotiating", toStatus:"Member"},
@@ -158,14 +158,14 @@ const INIT = [
   },
   {
     id:7, country:"Germany", continent:"Europe", empresa:"DPF", memberStatus:"Negotiating",
-    quarter:"", inicio:"", fim:"", rep:"Hans Müller", email:"h@dpf.de", tel:"+49 30 0000",
+    quarter:"", inicio:"", fim:"", rep:"Hans Müller", email:"h@dpf.de", tel:"+49 30 0000", tournament:"",
     statusHistory:[
       {id:"h7a", date:"2025-11-01", fromStatus:"", toStatus:"Negotiating"},
     ]
   },
   {
     id:8, country:"Japan", continent:"Asia", empresa:"JWF", memberStatus:"Documentation",
-    quarter:"", inicio:"", fim:"", rep:"Kenji Tanaka", email:"k@jwf.jp", tel:"+81 3 0000",
+    quarter:"", inicio:"", fim:"", rep:"Kenji Tanaka", email:"k@jwf.jp", tel:"+81 3 0000", tournament:"",
     statusHistory:[
       {id:"h8a", date:"2025-08-15", fromStatus:"",            toStatus:"Needed"},
       {id:"h8b", date:"2025-12-15", fromStatus:"Needed",      toStatus:"Documentation"},
@@ -173,7 +173,7 @@ const INIT = [
   },
   {
     id:9, country:"Canada", continent:"North America", empresa:"CWF", memberStatus:"Member",
-    quarter:"Q2", inicio:"2025-06-01", fim:"2026-06-01", rep:"Sarah Lee", email:"s@cwf.ca", tel:"+1 416 000",
+    quarter:"Q2", inicio:"2025-06-01", fim:"2026-06-01", rep:"Sarah Lee", email:"s@cwf.ca", tel:"+1 416 000", tournament:"WPF Canada Cup 2025",
     statusHistory:[
       {id:"h9a", date:"2025-06-01", fromStatus:"", toStatus:"Member"},
     ]
@@ -398,6 +398,11 @@ function EditModal({ row, onClose, onSave }) {
           </div>
         )}
         <div style={{borderTop:"1px solid #f3f4f6",paddingTop:14,marginBottom:18}}>
+          <p style={{fontSize:10,fontWeight:700,color:"#9ca3af",letterSpacing:1,margin:"0 0 12px"}}>TOURNAMENT</p>
+          <input value={f.tournament||""} onChange={e=>set("tournament",e.target.value)} placeholder="Tournament name (optional)"
+            style={{width:"100%",border:"1px solid #e5e7eb",borderRadius:8,padding:"7px 10px",fontSize:13,boxSizing:"border-box",marginBottom:14}}/>
+        </div>
+        <div style={{borderTop:"1px solid #f3f4f6",paddingTop:14,marginBottom:18}}>
           <p style={{fontSize:10,fontWeight:700,color:"#9ca3af",letterSpacing:1,margin:"0 0 12px"}}>CONTACT</p>
           {[{k:"rep",label:"Representative"},{k:"email",label:"Email"},{k:"tel",label:"Phone"}].map(({k,label})=>(
             <div key={k} style={{marginBottom:10}}>
@@ -417,7 +422,7 @@ function EditModal({ row, onClose, onSave }) {
 }
 
 // ── World Map ──────────────────────────────────────────────────
-function WorldMap({ countries, onCountryClick }) {
+function WorldMap({ countries, onCountryClick, showTrophies }) {
   const containerRef = useRef(null);
   useEffect(() => {
     const el = containerRef.current; if(!el) return;
@@ -444,10 +449,18 @@ function WorldMap({ countries, onCountryClick }) {
       Object.entries(byIso).forEach(([iso,c])=>{
         const feat=features.find(f=>+f.id===+iso);if(!feat)return;
         const cen=path.centroid(feat);if(!cen||isNaN(cen[0])||isNaN(cen[1]))return;
+        // Country name label
         svg.append("text").attr("x",cen[0]).attr("y",cen[1]-6)
           .attr("text-anchor","middle").attr("font-size","9").attr("font-weight","700")
           .attr("fill","#1e293b").attr("pointer-events","none")
           .style("text-shadow","0 1px 2px rgba(255,255,255,0.9)").text(c.country);
+        // Trophy emoji — only if showTrophies is on
+        if (showTrophies && c.tournament) {
+          svg.append("text").attr("x",cen[0]).attr("y",cen[1]-18)
+            .attr("text-anchor","middle").attr("font-size","13").attr("pointer-events","none")
+            .style("filter","drop-shadow(0 1px 2px rgba(0,0,0,0.3))")
+            .text("🏆");
+        }
       });
     };
     const loadAndRender=(topo)=>{
@@ -464,7 +477,7 @@ function WorldMap({ countries, onCountryClick }) {
       document.head.appendChild(s);
     }
     return()=>{cancelled=true;};
-  },[countries]);
+  },[countries, showTrophies]);
   return <div ref={containerRef} style={{width:"100%",minHeight:460,borderRadius:8,overflow:"hidden"}}/>;
 }
 
@@ -585,6 +598,7 @@ function DashboardTab({ data, setData }) {
   const [editModal,  setEditModal]  = useState(null);
   const [sfilt, setSfilt] = useState("All Status");
   const [cfilt, setCfilt] = useState("All Continents");
+  const [showTrophies, setShowTrophies] = useState(true);
 
   const named   = useMemo(()=>data.filter(c=>c.country),[data]);
   const chartData = useMemo(()=>buildChartData(data),[data]);
@@ -608,7 +622,7 @@ function DashboardTab({ data, setData }) {
   }:c));
   const addRow=()=>{
     const id=Date.now();
-    const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",statusHistory:[]};
+    const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",tournament:"",statusHistory:[]};
     setData(p=>[...p,novo]); setEditModal(novo);
   };
 
@@ -650,15 +664,23 @@ function DashboardTab({ data, setData }) {
       <div style={{background:"#fff",borderRadius:12,padding:22,marginBottom:18,boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
           <h2 style={{fontSize:14,fontWeight:700,margin:0}}>Member Map</h2>
-          <div style={{display:"flex",gap:16}}>
+          <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
             {Object.entries(STATUS_CFG).map(([s,c])=>(
               <span key={s} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7280"}}>
                 <span style={{width:6,height:6,borderRadius:"50%",background:c.dot,flexShrink:0}}/>{s}
               </span>
             ))}
+            {/* Trophy toggle */}
+            <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:11,color:showTrophies?"#1a1a1a":"#9ca3af",
+              padding:"4px 10px",borderRadius:20,border:"1px solid",borderColor:showTrophies?"#d4af37":"#e5e7eb",
+              background:showTrophies?"#fffbeb":"#fafafa",transition:"all .2s",userSelect:"none"}}>
+              <input type="checkbox" checked={showTrophies} onChange={e=>setShowTrophies(e.target.checked)}
+                style={{accentColor:"#d4af37",width:13,height:13,cursor:"pointer"}}/>
+              🏆 Tournaments
+            </label>
           </div>
         </div>
-        <WorldMap countries={named} onCountryClick={setEditModal}/>
+        <WorldMap countries={named} onCountryClick={setEditModal} showTrophies={showTrophies}/>
       </div>
 
       {/* Chart — now driven by real data */}
@@ -712,7 +734,7 @@ function DashboardTab({ data, setData }) {
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead>
               <tr style={{borderBottom:"2px solid #f3f4f6"}}>
-                {["Country","Continent","Company","Quarter","Status","Start","End","Vigência","Days"].map(h=>(
+                {["Country","Continent","Company","Quarter","Status","Start","End","Vigência","Days","Tournament"].map(h=>(
                   <th key={h} style={{textAlign:"left",fontSize:10,color:"#9ca3af",fontWeight:600,padding:"8px 12px",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:.5}}>{h}</th>
                 ))}
               </tr>
@@ -733,6 +755,9 @@ function DashboardTab({ data, setData }) {
                     <td style={{padding:"10px 12px",fontSize:12,color:"#6b7280"}}>{fmt(c.fim)}</td>
                     <td style={{padding:"10px 12px"}}>{v.status?<span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:6,height:6,borderRadius:"50%",background:vigDot[v.status],flexShrink:0}}/><span style={{fontSize:12,color:v.color,fontWeight:600}}>{v.status}</span></span>:<span style={{color:"#d1d5db"}}>—</span>}</td>
                     <td style={{padding:"10px 12px",fontSize:12,fontWeight:600,color:v.color||"#9ca3af"}}>{v.label||"—"}</td>
+                    <td style={{padding:"10px 12px",fontSize:12,color:c.tournament?"#374151":"#d1d5db",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {c.tournament?<span style={{display:"flex",alignItems:"center",gap:5}}>🏆 {c.tournament}</span>:"—"}
+                    </td>
                   </tr>
                 );
               })}
@@ -781,7 +806,7 @@ function DataTab({ data, setData }) {
 
   const addRow = () => {
     const id=Date.now();
-    const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",statusHistory:[]};
+    const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",tournament:"",statusHistory:[]};
     setData(p=>[...p,novo]); setEditModal(novo);
   };
 
@@ -795,7 +820,8 @@ function DataTab({ data, setData }) {
     {key:"fim",          label:"End",       w:95},
     {key:"rep",          label:"Rep.",       w:130},
     {key:"email",        label:"Email",     w:160},
-    {key:"tel",          label:"Phone",     w:130},
+    {key:"tel",          label:"Phone",      w:130},
+    {key:"tournament",   label:"Tournament", w:180},
   ];
   const vigDot={"Active":"#22c55e","Expiring":"#f59e0b","Expired":"#ef4444"};
 
