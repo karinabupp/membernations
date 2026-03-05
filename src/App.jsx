@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import * as d3 from "d3";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Globe, Users, AlertTriangle, XCircle, X, Plus, Database, LayoutDashboard, Target, ChevronDown, ChevronRight, History } from "lucide-react";
+import { Globe, Users, AlertTriangle, XCircle, X, Plus, Database, LayoutDashboard, Target, ChevronDown, ChevronRight, History, ExternalLink, ArrowLeft, Map } from "lucide-react";
 
 // ── Fonts ──────────────────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("wpf-fonts")) {
@@ -111,6 +111,10 @@ const INIT = [
   {
     id:1, country:"Brazil", continent:"South America", empresa:"CBTH", memberStatus:"Member",
     quarter:"Q1", inicio:"2026-03-04", fim:"2026-07-29", rep:"João Silva", email:"joao@cbth.com", tel:"+55 11 9999-0001", tournament:"WPF South America Open 2026",
+    states:[
+      {id:"s1a", name:"São Paulo", federation:"FPSP", memberStatus:"Member", inicio:"2026-01-01", fim:"2026-12-31", rep:"Carlos Motta", email:"carlos@fpsp.com.br", tel:"+55 11 3000-0001"},
+      {id:"s1b", name:"Rio de Janeiro", federation:"FPRJ", memberStatus:"Member", inicio:"2026-02-01", fim:"2026-12-31", rep:"Ana Lima", email:"ana@fprj.com.br", tel:"+55 21 3000-0002"},
+    ],
     statusHistory:[
       {id:"h1a", date:"2025-08-01", fromStatus:"",            toStatus:"Negotiating"},
       {id:"h1b", date:"2025-11-15", fromStatus:"Negotiating", toStatus:"Documentation"},
@@ -346,17 +350,37 @@ function RecordsModal({ title, subtitle, rows, onClose, onEdit }) {
 }
 
 // ── Edit Modal ─────────────────────────────────────────────────
-function EditModal({ row, onClose, onSave }) {
-  const [f, setF] = useState({...row});
+function EditModal({ row, onClose, onSave, onExpandCountry }) {
+  const [f, setF] = useState({...row, states: row.states||[]});
   const v = calcVig(f.inicio, f.fim);
   const set = (k,val) => setF(p=>({...p,[k]:val}));
+
+  const addState = () => {
+    const newState = {id:`s${Date.now()}`, name:"", federation:"", memberStatus:"Member", inicio:"", fim:"", rep:"", email:"", tel:""};
+    setF(p=>({...p, states:[...(p.states||[]), newState]}));
+  };
+  const updateState = (sid, field, val) => {
+    setF(p=>({...p, states:(p.states||[]).map(s=>s.id===sid?{...s,[field]:val}:s)}));
+  };
+  const removeState = (sid) => {
+    setF(p=>({...p, states:(p.states||[]).filter(s=>s.id!==sid)}));
+  };
+
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()}
       style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1100,padding:16}}>
-      <div style={{background:"#fff",borderRadius:16,padding:28,width:520,maxWidth:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,0.2)"}}>
+      <div style={{background:"#fff",borderRadius:16,padding:28,width:560,maxWidth:"100%",maxHeight:"92vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,0.2)"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:22}}>
           <Globe size={18} color="#f59e0b"/>
           <h2 style={{fontSize:18,fontWeight:700,margin:0,fontFamily:"'Playfair Display',Georgia,serif"}}>{f.country||"New Country"}</h2>
+          {f.country && onExpandCountry && (
+            <button onClick={()=>{onSave(f);onClose();onExpandCountry(f);}}
+              style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"1px solid #e0e7ff",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:11,color:"#6366f1",fontWeight:600,marginLeft:4,transition:"all .15s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="#eef2ff";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="none";}}>
+              <ExternalLink size={11}/> Expand Country
+            </button>
+          )}
           <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"1px solid #e5e7eb",borderRadius:"50%",width:26,height:26,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af"}}><X size={12}/></button>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
@@ -412,6 +436,66 @@ function EditModal({ row, onClose, onSave }) {
             </div>
           ))}
         </div>
+
+        {/* States Section */}
+        <div style={{borderTop:"1px solid #f3f4f6",paddingTop:14,marginBottom:18}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <p style={{fontSize:10,fontWeight:700,color:"#9ca3af",letterSpacing:1,margin:0}}>STATES / PROVINCES</p>
+            <button onClick={addState}
+              style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"1px dashed #a5b4fc",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#6366f1",fontWeight:600}}
+              onMouseEnter={e=>e.currentTarget.style.background="#eef2ff"}
+              onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <Plus size={10}/> Add State
+            </button>
+          </div>
+          {(f.states||[]).length === 0 && (
+            <div style={{fontSize:12,color:"#c4c9d4",fontStyle:"italic",padding:"8px 0"}}>No states added yet. Click "Add State" to begin.</div>
+          )}
+          {(f.states||[]).map((st,i)=>(
+            <div key={st.id} style={{background:"#f8faff",borderRadius:10,padding:"12px 14px",marginBottom:10,border:"1px solid #e0e7ff",position:"relative"}}>
+              <button onClick={()=>removeState(st.id)}
+                style={{position:"absolute",top:8,right:8,background:"none",border:"none",cursor:"pointer",color:"#d1d5db",padding:3,borderRadius:4,display:"flex",alignItems:"center"}}
+                onMouseEnter={e=>e.currentTarget.style.color="#ef4444"}
+                onMouseLeave={e=>e.currentTarget.style.color="#d1d5db"}>
+                <X size={12}/>
+              </button>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                {[{k:"name",label:"State / Province"},{k:"federation",label:"Federation"}].map(({k,label})=>(
+                  <div key={k}>
+                    <label style={{fontSize:10,color:"#9ca3af",fontWeight:700,display:"block",marginBottom:3,textTransform:"uppercase",letterSpacing:.4}}>{label}</label>
+                    <input value={st[k]||""} onChange={e=>updateState(st.id,k,e.target.value)} placeholder={label}
+                      style={{width:"100%",border:"1px solid #e5e7eb",borderRadius:6,padding:"5px 8px",fontSize:12,boxSizing:"border-box",background:"#fff"}}/>
+                  </div>
+                ))}
+                <div>
+                  <label style={{fontSize:10,color:"#9ca3af",fontWeight:700,display:"block",marginBottom:3,textTransform:"uppercase",letterSpacing:.4}}>Status</label>
+                  <select value={st.memberStatus||"Member"} onChange={e=>updateState(st.id,"memberStatus",e.target.value)}
+                    style={{width:"100%",border:"1px solid #e5e7eb",borderRadius:6,padding:"5px 8px",fontSize:12,background:"#fff",
+                      color:STATUS_CFG[st.memberStatus||"Member"]?.color,fontWeight:600,cursor:"pointer"}}>
+                    {Object.keys(STATUS_CFG).map(o=><option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+                {[{k:"inicio",label:"Entry Date"},{k:"fim",label:"Exit Date"}].map(({k,label})=>(
+                  <div key={k}>
+                    <label style={{fontSize:10,color:"#9ca3af",fontWeight:700,display:"block",marginBottom:3,textTransform:"uppercase",letterSpacing:.4}}>{label}</label>
+                    <input type="date" value={st[k]||""} onChange={e=>updateState(st.id,k,e.target.value)}
+                      style={{width:"100%",border:"1px solid #e5e7eb",borderRadius:6,padding:"5px 8px",fontSize:12,boxSizing:"border-box",background:"#fff"}}/>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+                {[{k:"rep",label:"Representative"},{k:"email",label:"Email"},{k:"tel",label:"Phone"}].map(({k,label})=>(
+                  <div key={k}>
+                    <label style={{fontSize:10,color:"#9ca3af",fontWeight:700,display:"block",marginBottom:3,textTransform:"uppercase",letterSpacing:.4}}>{label}</label>
+                    <input value={st[k]||""} onChange={e=>updateState(st.id,k,e.target.value)} placeholder={label}
+                      style={{width:"100%",border:"none",borderBottom:"1px solid #e5e7eb",padding:"3px 0",fontSize:12,background:"transparent",outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
         <div style={{display:"flex",justifyContent:"flex-end",gap:10}}>
           <button onClick={onClose} style={{padding:"8px 18px",borderRadius:8,border:"1px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:13}}>Cancel</button>
           <button onClick={()=>{onSave(f);onClose();}} style={{padding:"8px 18px",borderRadius:8,border:"none",background:"#1a1a1a",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>Save</button>
@@ -421,8 +505,255 @@ function EditModal({ row, onClose, onSave }) {
   );
 }
 
+
+// ── Embedded state geodata (no external fetch needed) ──────────
+const GEO_STATES = {
+  "Brazil": {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Roraima"},"geometry":{"type":"Polygon","coordinates":[[[-64.4,5.27],[-61.3,5.27],[-59.85,4.5],[-59.4,2.68],[-60.2,1.9],[-62.1,1.9],[-63.4,2.2],[-64.0,1.3],[-64.8,0.8],[-64.8,2.5],[-63.5,3.8],[-64.4,5.27]]]}},{"type":"Feature","properties":{"name":"Amap\u00e1"},"geometry":{"type":"Polygon","coordinates":[[[-54.07,4.38],[-51.22,4.38],[-50.44,3.2],[-50.77,1.58],[-51.79,0.62],[-52.38,0.05],[-54.07,0.5],[-54.07,4.38]]]}},{"type":"Feature","properties":{"name":"Par\u00e1"},"geometry":{"type":"Polygon","coordinates":[[[-54.07,4.38],[-54.07,0.5],[-56.0,1.5],[-57.5,2.0],[-60.5,2.0],[-60.5,-0.5],[-60.0,-2.0],[-57.5,-4.0],[-56.5,-4.0],[-52.5,-8.0],[-50.7,-5.2],[-47.0,-5.2],[-46.0,-3.5],[-46.0,-0.5],[-47.5,0.5],[-49.5,1.2],[-50.8,2.5],[-51.22,4.38],[-54.07,4.38]]]}},{"type":"Feature","properties":{"name":"Amazonas"},"geometry":{"type":"Polygon","coordinates":[[[-74.0,2.2],[-74.0,-7.5],[-66.8,-7.9],[-60.5,-7.9],[-60.5,2.0],[-57.5,2.0],[-56.0,1.5],[-54.07,0.5],[-54.07,4.38],[-57.5,4.5],[-60.0,4.0],[-62.0,4.2],[-64.4,5.27],[-64.8,0.8],[-64.0,1.3],[-63.4,2.2],[-62.1,1.9],[-60.2,1.9],[-59.4,2.68],[-59.85,4.5],[-61.3,5.27],[-64.4,5.27],[-68.0,2.2],[-74.0,2.2]]]}},{"type":"Feature","properties":{"name":"Acre"},"geometry":{"type":"Polygon","coordinates":[[[-74.0,-7.5],[-66.8,-7.9],[-65.3,-10.0],[-67.3,-10.3],[-68.0,-11.0],[-70.5,-11.0],[-72.5,-9.5],[-74.0,-7.5]]]}},{"type":"Feature","properties":{"name":"Rond\u00f4nia"},"geometry":{"type":"Polygon","coordinates":[[[-66.8,-7.9],[-60.5,-7.9],[-60.5,-9.8],[-63.0,-10.0],[-65.3,-10.0],[-66.8,-7.9]]]}},{"type":"Feature","properties":{"name":"Tocantins"},"geometry":{"type":"Polygon","coordinates":[[[-50.7,-5.2],[-47.0,-5.2],[-46.0,-7.0],[-46.0,-10.5],[-48.5,-13.4],[-50.7,-13.4],[-52.5,-11.0],[-52.5,-8.0],[-50.7,-5.2]]]}},{"type":"Feature","properties":{"name":"Maranh\u00e3o"},"geometry":{"type":"Polygon","coordinates":[[[-48.8,-1.0],[-44.5,-1.0],[-43.0,-2.5],[-41.4,-2.8],[-41.4,-7.9],[-43.5,-9.5],[-46.0,-10.5],[-46.0,-7.0],[-47.0,-5.2],[-48.8,-3.5],[-48.8,-1.0]]]}},{"type":"Feature","properties":{"name":"Piau\u00ed"},"geometry":{"type":"Polygon","coordinates":[[[-41.4,-2.8],[-43.0,-2.5],[-44.5,-1.0],[-45.9,-3.0],[-45.9,-9.5],[-43.5,-9.5],[-41.4,-7.9],[-41.4,-2.8]]]}},{"type":"Feature","properties":{"name":"Cear\u00e1"},"geometry":{"type":"Polygon","coordinates":[[[-41.4,-2.8],[-37.3,-2.8],[-34.9,-4.8],[-37.3,-6.5],[-38.6,-6.9],[-41.4,-7.9],[-41.4,-2.8]]]}},{"type":"Feature","properties":{"name":"Rio Grande do Norte"},"geometry":{"type":"Polygon","coordinates":[[[-38.6,-4.8],[-34.9,-4.8],[-35.0,-6.0],[-37.3,-6.5],[-38.6,-4.8]]]}},{"type":"Feature","properties":{"name":"Para\u00edba"},"geometry":{"type":"Polygon","coordinates":[[[-38.8,-6.0],[-35.0,-6.0],[-34.8,-7.2],[-36.5,-7.2],[-38.8,-7.5],[-38.8,-6.0]]]}},{"type":"Feature","properties":{"name":"Pernambuco"},"geometry":{"type":"Polygon","coordinates":[[[-41.4,-7.9],[-38.6,-6.9],[-37.3,-6.5],[-35.0,-6.0],[-34.8,-7.2],[-34.8,-9.0],[-37.5,-9.5],[-40.0,-9.5],[-41.4,-9.5],[-41.4,-7.9]]]}},{"type":"Feature","properties":{"name":"Alagoas"},"geometry":{"type":"Polygon","coordinates":[[[-38.0,-9.0],[-35.0,-9.0],[-35.2,-10.5],[-37.0,-10.5],[-38.2,-10.0],[-38.0,-9.0]]]}},{"type":"Feature","properties":{"name":"Sergipe"},"geometry":{"type":"Polygon","coordinates":[[[-38.2,-9.5],[-37.0,-10.5],[-35.2,-10.5],[-35.2,-11.5],[-37.0,-11.5],[-38.2,-10.5],[-38.2,-9.5]]]}},{"type":"Feature","properties":{"name":"Bahia"},"geometry":{"type":"Polygon","coordinates":[[[-45.9,-9.5],[-40.0,-9.5],[-37.5,-9.5],[-34.8,-9.0],[-35.2,-11.5],[-37.0,-11.5],[-38.2,-10.5],[-39.5,-14.5],[-39.5,-18.4],[-40.5,-19.0],[-42.5,-18.4],[-44.5,-17.5],[-46.5,-15.5],[-47.5,-14.0],[-46.0,-10.5],[-45.9,-9.5]]]}},{"type":"Feature","properties":{"name":"Mato Grosso"},"geometry":{"type":"Polygon","coordinates":[[[-61.6,-7.5],[-57.5,-7.5],[-52.5,-8.0],[-52.5,-11.0],[-50.7,-13.4],[-51.5,-14.5],[-53.5,-17.5],[-58.2,-17.5],[-61.6,-14.0],[-61.6,-7.5]]]}},{"type":"Feature","properties":{"name":"Goi\u00e1s"},"geometry":{"type":"Polygon","coordinates":[[[-53.5,-11.5],[-47.5,-11.5],[-47.5,-14.0],[-46.5,-15.5],[-48.0,-17.5],[-50.0,-19.5],[-51.5,-18.5],[-53.5,-17.5],[-51.5,-14.5],[-50.7,-13.4],[-52.5,-11.0],[-52.5,-8.0],[-53.5,-11.5]]]}},{"type":"Feature","properties":{"name":"Distrito Federal"},"geometry":{"type":"Polygon","coordinates":[[[-48.3,-15.5],[-47.3,-15.5],[-47.3,-16.1],[-48.3,-16.1],[-48.3,-15.5]]]}},{"type":"Feature","properties":{"name":"Mato Grosso do Sul"},"geometry":{"type":"Polygon","coordinates":[[[-58.2,-17.5],[-53.5,-17.5],[-51.5,-18.5],[-50.0,-19.5],[-50.0,-22.5],[-51.0,-22.5],[-54.6,-22.5],[-58.2,-24.1],[-58.2,-17.5]]]}},{"type":"Feature","properties":{"name":"Minas Gerais"},"geometry":{"type":"Polygon","coordinates":[[[-51.0,-14.2],[-47.5,-14.0],[-46.5,-15.5],[-44.5,-17.5],[-42.5,-18.4],[-40.5,-19.0],[-39.5,-18.4],[-39.5,-21.3],[-41.9,-21.3],[-44.9,-23.0],[-46.5,-23.5],[-48.0,-23.0],[-50.0,-22.5],[-51.0,-22.5],[-51.0,-14.2]]]}},{"type":"Feature","properties":{"name":"Esp\u00edrito Santo"},"geometry":{"type":"Polygon","coordinates":[[[-41.9,-17.9],[-39.5,-17.9],[-39.5,-21.3],[-41.9,-21.3],[-41.9,-17.9]]]}},{"type":"Feature","properties":{"name":"Rio de Janeiro"},"geometry":{"type":"Polygon","coordinates":[[[-44.9,-21.0],[-41.9,-21.3],[-41.0,-23.4],[-43.5,-23.4],[-44.9,-23.0],[-46.5,-23.5],[-44.9,-21.0]]]}},{"type":"Feature","properties":{"name":"S\u00e3o Paulo"},"geometry":{"type":"Polygon","coordinates":[[[-53.1,-20.0],[-51.0,-19.8],[-48.0,-23.0],[-46.5,-23.5],[-44.9,-23.0],[-44.9,-24.0],[-47.5,-24.5],[-50.0,-24.5],[-51.0,-25.5],[-53.1,-25.0],[-53.1,-20.0]]]}},{"type":"Feature","properties":{"name":"Paran\u00e1"},"geometry":{"type":"Polygon","coordinates":[[[-54.6,-22.5],[-51.0,-22.5],[-50.0,-22.5],[-50.0,-24.5],[-51.0,-25.5],[-53.1,-25.0],[-54.6,-25.5],[-54.6,-22.5]]]}},{"type":"Feature","properties":{"name":"Santa Catarina"},"geometry":{"type":"Polygon","coordinates":[[[-53.9,-25.9],[-51.0,-25.5],[-48.5,-26.5],[-48.4,-29.4],[-51.5,-29.4],[-53.9,-29.4],[-53.9,-25.9]]]}},{"type":"Feature","properties":{"name":"Rio Grande do Sul"},"geometry":{"type":"Polygon","coordinates":[[[-57.6,-27.1],[-53.9,-27.1],[-51.5,-29.4],[-53.5,-33.8],[-57.6,-33.8],[-57.6,-27.1]]]}}]},
+};
+
+// ── Country State Map ──────────────────────────────────────────
+function CountryStateMap({ country, states, onBack, onSaveStates }) {
+  const containerRef = useRef(null);
+  const [localStates, setLocalStates] = useState(states||[]);
+  const [showTrophies, setShowTrophies] = useState(true);
+
+  useEffect(()=>{ setLocalStates(states||[]); },[states]);
+
+  const addState = () => {
+    const s = {id:`s${Date.now()}`, name:"", federation:"", memberStatus:"Member", tournament:"", inicio:"", fim:"", rep:"", email:"", tel:""};
+    const next = [...localStates, s];
+    setLocalStates(next);
+    if(onSaveStates) onSaveStates(next);
+  };
+  const updateState = (sid, field, val) => {
+    const next = localStates.map(s=>s.id===sid?{...s,[field]:val}:s);
+    setLocalStates(next);
+    if(onSaveStates) onSaveStates(next);
+  };
+  const removeState = (sid) => {
+    const next = localStates.filter(s=>s.id!==sid);
+    setLocalStates(next);
+    if(onSaveStates) onSaveStates(next);
+  };
+
+  const statesByName = useMemo(()=>{
+    const m={};
+    localStates.forEach(s=>{ if(s.name) m[s.name.toLowerCase()]=s; });
+    return m;
+  },[localStates]);
+
+  useEffect(()=>{
+    const el=containerRef.current; if(!el) return;
+    let cancelled=false;
+
+    const doRender=()=>{
+      if(cancelled||!containerRef.current) return;
+      // getBoundingClientRect is reliable after double-RAF
+      const rect=el.getBoundingClientRect();
+      const W=Math.max(rect.width||el.clientWidth||900, 300);
+      const H=Math.round(W*0.56);
+
+      const geoData=GEO_STATES[country.country];
+
+      d3.select(el).selectAll("*").remove();
+      const svg=d3.select(el).append("svg").attr("width","100%").attr("height",H).attr("viewBox",`0 0 ${W} ${H}`);
+      svg.append("rect").attr("width",W).attr("height",H).attr("fill","#f1f5f9").attr("rx",8);
+
+      if(!geoData||!geoData.features||geoData.features.length===0){
+        svg.append("text").attr("x",W/2).attr("y",H/2).attr("text-anchor","middle").attr("font-size","13").attr("fill","#9ca3af").text(`State map for ${country.country} not yet available.`);
+        return;
+      }
+
+      const features=geoData.features;
+      const collection={type:"FeatureCollection",features};
+      // fitExtent with padding — works for any country, no hardcoded rotation
+      const proj=d3.geoMercator().fitExtent([[20,20],[W-20,H-20]],collection);
+      const path=d3.geoPath().projection(proj);
+
+      const tip=d3.select(el).append("div")
+        .style("position","absolute").style("background","#fff").style("border","1px solid #e5e7eb")
+        .style("border-radius","8px").style("padding","8px 12px").style("font-size","12px")
+        .style("pointer-events","none").style("opacity","0")
+        .style("box-shadow","0 4px 16px rgba(0,0,0,.12)").style("max-width","220px").style("z-index","10");
+
+      svg.selectAll("path").data(features).enter().append("path")
+        .attr("d",path)
+        .attr("fill",d=>{
+          const st=statesByName[(d.properties.name||"").toLowerCase()];
+          return st?(STATUS_CFG[st.memberStatus]?.dot||"#22c55e"):"#dde3ea";
+        })
+        .attr("stroke","#fff").attr("stroke-width",d=>{
+          const st=statesByName[(d.properties.name||"").toLowerCase()];
+          return st?1:0.4;
+        })
+        .style("cursor","default")
+        .on("mouseenter",function(e,d){
+          d3.select(this).attr("opacity",0.72);
+          const name=d.properties.name||"";
+          const st=statesByName[name.toLowerCase()];
+          const sc=st?STATUS_CFG[st.memberStatus]?.dot||"#22c55e":"#9ca3af";
+          tip.style("opacity","1").html(
+            st
+              ?`<b>${name}</b>${st.tournament?"&nbsp;🏆":""}<br/><span style='color:${sc};font-weight:700'>${st.memberStatus||"Member"}</span> · <span style='color:#16a34a;font-weight:600'>${st.federation||"—"}</span><br/><span style='color:#9ca3af'>${st.rep||""}</span>`
+              :`<b>${name}</b><br/><span style='color:#9ca3af;font-style:italic'>No federation</span>`
+          );
+        })
+        .on("mousemove",function(e){
+          const rect=el.getBoundingClientRect();
+          tip.style("left",(e.clientX-rect.left+12)+"px").style("top",(e.clientY-rect.top-36)+"px");
+        })
+        .on("mouseleave",function(){d3.select(this).attr("opacity",1);tip.style("opacity","0");});
+
+      // Labels — same style as WorldMap
+      features.forEach(d=>{
+        const name=d.properties.name||"";
+        const st=statesByName[name.toLowerCase()];
+        const hasTrophy=showTrophies&&st&&st.tournament&&st.tournament.trim();
+        const cen=path.centroid(d);
+        if(!cen||isNaN(cen[0])||isNaN(cen[1])) return;
+        svg.append("text").attr("x",cen[0]).attr("y",cen[1]+(hasTrophy?2:-2))
+          .attr("text-anchor","middle").attr("font-size","8").attr("font-weight","700")
+          .attr("fill",st?"#fff":"#1e293b").attr("pointer-events","none")
+          .style("text-shadow",st?"0 1px 2px rgba(0,0,0,0.5)":"0 1px 2px rgba(255,255,255,0.9)")
+          .text(name.length>11?name.slice(0,10)+"…":name);
+        if(hasTrophy){
+          svg.append("text").attr("x",cen[0]).attr("y",cen[1]-10)
+            .attr("text-anchor","middle").attr("font-size","10").attr("pointer-events","none")
+            .style("filter","drop-shadow(0 1px 2px rgba(0,0,0,0.3))").text("🏆");
+        }
+      });
+    };
+
+    // Double RAF guarantees browser has calculated layout before we read dimensions
+    const raf1=requestAnimationFrame(()=>{
+      const raf2=requestAnimationFrame(()=>{ if(!cancelled) doRender(); });
+      return ()=>cancelAnimationFrame(raf2);
+    });
+    return()=>{ cancelled=true; cancelAnimationFrame(raf1); };
+  },[country, statesByName, showTrophies]);
+
+  const cfg=STATUS_CFG[country.memberStatus]||STATUS_CFG.Needed;
+
+  return (
+    <div style={{maxWidth:1160,margin:"0 auto",padding:"32px 20px"}}>
+      <button onClick={onBack}
+        style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontSize:13,color:"#9ca3af",fontWeight:500,marginBottom:20,padding:"4px 0"}}
+        onMouseEnter={e=>e.currentTarget.style.color="#1a1a1a"}
+        onMouseLeave={e=>e.currentTarget.style.color="#9ca3af"}>
+        <ArrowLeft size={14}/> Back to Dashboard
+      </button>
+
+      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:24}}>
+        <div style={{width:44,height:44,background:cfg.bg,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Map size={22} color={cfg.dot}/>
+        </div>
+        <div>
+          <h1 style={{fontSize:26,fontWeight:700,margin:"0 0 2px",fontFamily:"'Playfair Display',Georgia,serif"}}>{country.country}</h1>
+          <div style={{display:"flex",gap:10,alignItems:"center"}}>
+            <Badge status={country.memberStatus}/>
+            <span style={{fontSize:12,color:"#9ca3af"}}>{country.continent}</span>
+            {country.empresa&&<span style={{fontSize:12,color:"#9ca3af"}}>· {country.empresa}</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* State Map */}
+      <div style={{background:"#fff",borderRadius:12,padding:22,marginBottom:18,boxShadow:"0 1px 4px rgba(0,0,0,0.07)",position:"relative"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <h2 style={{fontSize:14,fontWeight:700,margin:0}}>State / Province Map</h2>
+          <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+            {Object.entries(STATUS_CFG).map(([s,c])=>(
+              <span key={s} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7280"}}>
+                <span style={{width:9,height:9,borderRadius:2,background:c.dot,display:"inline-block"}}/>{s}
+              </span>
+            ))}
+            <span style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7280"}}>
+              <span style={{width:9,height:9,borderRadius:2,background:"#dde3ea",display:"inline-block"}}/> No Federation
+            </span>
+            <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7280",cursor:"pointer",userSelect:"none",paddingLeft:8,borderLeft:"1px solid #e5e7eb"}}>
+              <input type="checkbox" checked={showTrophies} onChange={e=>setShowTrophies(e.target.checked)} style={{accentColor:"#f59e0b",width:13,height:13,cursor:"pointer"}}/>
+              🏆 Tournaments
+            </label>
+          </div>
+        </div>
+        <div ref={containerRef} style={{width:"100%",minHeight:520,borderRadius:8,overflow:"hidden",position:"relative"}}/>
+      </div>
+
+      {/* States Table */}
+      <div style={{background:"#fff",borderRadius:12,padding:22,boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+          <h2 style={{fontSize:14,fontWeight:700,margin:0}}>Registered States & Federations</h2>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <span style={{background:"#f3f4f6",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:600,color:"#6b7280"}}>{localStates.length} states</span>
+            <button onClick={addState}
+              style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"1px dashed #86efac",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,color:"#16a34a",fontWeight:600}}
+              onMouseEnter={e=>e.currentTarget.style.background="#dcfce7"}
+              onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <Plus size={11}/> Add State
+            </button>
+          </div>
+        </div>
+        {localStates.length===0
+          ?<div style={{padding:"32px 0",textAlign:"center",color:"#c4c9d4",fontSize:13,fontStyle:"italic"}}>No states registered yet. Click "Add State" to begin.</div>
+          :<div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead>
+                <tr style={{borderBottom:"2px solid #f3f4f6"}}>
+                  {["State / Province","Status","🏆","Federation","Entry Date","Exit Date","Representative","Email","Phone",""].map(h=>(
+                    <th key={h} style={{textAlign:"left",padding:"8px 12px",fontSize:10,color:"#9ca3af",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {localStates.map(st=>(
+                  <tr key={st.id} style={{borderBottom:"1px solid #f9fafb"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#f0fdf4"}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{padding:"8px 12px"}}>
+                      <input value={st.name||""} onChange={e=>updateState(st.id,"name",e.target.value)} placeholder="State name"
+                        style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,fontWeight:600,background:"transparent",outline:"none",width:"100%",minWidth:100}}/>
+                    </td>
+                    <td style={{padding:"8px 12px",minWidth:130}}>
+                      <select value={st.memberStatus||"Member"} onChange={e=>updateState(st.id,"memberStatus",e.target.value)}
+                        style={{border:"1px solid #e5e7eb",borderRadius:6,padding:"3px 6px",fontSize:11,background:"#fff",cursor:"pointer",
+                          color:STATUS_CFG[st.memberStatus||"Member"]?.color,fontWeight:600}}>
+                        {Object.keys(STATUS_CFG).map(o=><option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </td>
+                    <td style={{padding:"8px 12px",minWidth:130}}>
+                      <input value={st.tournament||""} onChange={e=>updateState(st.id,"tournament",e.target.value)} placeholder="Tournament name…"
+                        style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:11,background:"transparent",outline:"none",width:"100%",color:"#b45309"}}/>
+                    </td>
+                    <td style={{padding:"8px 12px"}}>
+                      <input value={st.federation||""} onChange={e=>updateState(st.id,"federation",e.target.value)} placeholder="Federation"
+                        style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,background:"transparent",outline:"none",width:"100%",minWidth:80,color:"#16a34a",fontWeight:600}}/>
+                    </td>
+                    <td style={{padding:"8px 12px"}}><input type="date" value={st.inicio||""} onChange={e=>updateState(st.id,"inicio",e.target.value)} style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:11,background:"transparent",outline:"none"}}/></td>
+                    <td style={{padding:"8px 12px"}}><input type="date" value={st.fim||""} onChange={e=>updateState(st.id,"fim",e.target.value)} style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:11,background:"transparent",outline:"none"}}/></td>
+                    <td style={{padding:"8px 12px"}}><input value={st.rep||""} onChange={e=>updateState(st.id,"rep",e.target.value)} placeholder="Representative" style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,background:"transparent",outline:"none",width:"100%",minWidth:100}}/></td>
+                    <td style={{padding:"8px 12px"}}><input value={st.email||""} onChange={e=>updateState(st.id,"email",e.target.value)} placeholder="Email" style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,background:"transparent",outline:"none",width:"100%",minWidth:120}}/></td>
+                    <td style={{padding:"8px 12px"}}><input value={st.tel||""} onChange={e=>updateState(st.id,"tel",e.target.value)} placeholder="Phone" style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,background:"transparent",outline:"none",width:"100%",minWidth:90}}/></td>
+                    <td style={{padding:"8px 6px",textAlign:"center"}}>
+                      <button onClick={()=>removeState(st.id)}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"#e5e7eb",padding:3,borderRadius:4,display:"flex",alignItems:"center"}}
+                        onMouseEnter={e=>e.currentTarget.style.color="#ef4444"}
+                        onMouseLeave={e=>e.currentTarget.style.color="#e5e7eb"}>
+                        <X size={12}/>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  );
+}
+
 // ── World Map ──────────────────────────────────────────────────
-function WorldMap({ countries, onCountryClick, showTrophies }) {
+function WorldMap({ countries, onCountryClick, showTrophies, showTasks }) {
   const containerRef = useRef(null);
   useEffect(() => {
     const el = containerRef.current; if(!el) return;
@@ -449,17 +780,25 @@ function WorldMap({ countries, onCountryClick, showTrophies }) {
       Object.entries(byIso).forEach(([iso,c])=>{
         const feat=features.find(f=>+f.id===+iso);if(!feat)return;
         const cen=path.centroid(feat);if(!cen||isNaN(cen[0])||isNaN(cen[1]))return;
-        // Country name label
-        svg.append("text").attr("x",cen[0]).attr("y",cen[1]-6)
+        const hasTrophy = showTrophies && c.tournament;
+        const tasks = c.tasks||[];
+        const openTasks = tasks.filter(t=>t.taskStatus!=="Done");
+        const overdueTasks = openTasks.filter(t=>t.deadline&&new Date(t.deadline)<new Date());
+        const taskEmoji = showTasks && openTasks.length>0 ? (overdueTasks.length>0?"🔴":"⚠️") : null;
+        const hasExtra = hasTrophy || taskEmoji;
+        svg.append("text").attr("x",cen[0]).attr("y",cen[1]+(hasExtra?10:2))
           .attr("text-anchor","middle").attr("font-size","9").attr("font-weight","700")
           .attr("fill","#1e293b").attr("pointer-events","none")
           .style("text-shadow","0 1px 2px rgba(255,255,255,0.9)").text(c.country);
-        // Trophy emoji — only if showTrophies is on
-        if (showTrophies && c.tournament) {
-          svg.append("text").attr("x",cen[0]).attr("y",cen[1]-18)
-            .attr("text-anchor","middle").attr("font-size","13").attr("pointer-events","none")
-            .style("filter","drop-shadow(0 1px 2px rgba(0,0,0,0.3))")
-            .text("🏆");
+        if(hasTrophy){
+          svg.append("text").attr("x",cen[0]-(taskEmoji?7:0)).attr("y",cen[1]-2)
+            .attr("text-anchor","middle").attr("font-size","12").attr("pointer-events","none")
+            .style("filter","drop-shadow(0 1px 2px rgba(0,0,0,0.3))").text("🏆");
+        }
+        if(taskEmoji){
+          svg.append("text").attr("x",cen[0]+(hasTrophy?7:0)).attr("y",cen[1]-2)
+            .attr("text-anchor","middle").attr("font-size","12").attr("pointer-events","none")
+            .style("filter","drop-shadow(0 1px 2px rgba(0,0,0,0.3))").text(taskEmoji);
         }
       });
     };
@@ -477,7 +816,7 @@ function WorldMap({ countries, onCountryClick, showTrophies }) {
       document.head.appendChild(s);
     }
     return()=>{cancelled=true;};
-  },[countries, showTrophies]);
+  },[countries, showTrophies, showTasks]);
   return <div ref={containerRef} style={{width:"100%",minHeight:460,borderRadius:8,overflow:"hidden"}}/>;
 }
 
@@ -509,8 +848,29 @@ function EditableCell({ value, onChange, type="text", opts }) {
 }
 
 // ── Status History Editor (inline in Master Data) ──────────────
-function StatusHistoryEditor({ record, onUpdate }) {
+const TASK_STATUS = ["Not Started","Doing","Done"];
+const TASK_STATUS_CFG = {
+  "Not Started": {color:"#6b7280", bg:"#f3f4f6"},
+  "Doing":       {color:"#1d4ed8", bg:"#dbeafe"},
+  "Done":        {color:"#15803d", bg:"#dcfce7"},
+};
+
+function StatusHistoryEditor({ record, onUpdate, responsibles, setResponsibles }) {
   const hist = useMemo(()=>[...(record.statusHistory||[])].sort((a,b)=>a.date.localeCompare(b.date)),[record.statusHistory]);
+  const statesList = record.states||[];
+  const tasksList  = record.tasks||[];
+  const [addingResp, setAddingResp] = useState(null); // tid being edited with new person input
+  const [newRespName, setNewRespName] = useState("");
+
+  const confirmNewResp = (tid) => {
+    const name = newRespName.trim();
+    if (!name) { setAddingResp(null); return; }
+    const exists = (responsibles||[]).find(r=>r.name.toLowerCase()===name.toLowerCase());
+    if (!exists) setResponsibles(p=>[...p, {id:`r${Date.now()}`, name, area:""}]);
+    updateTask(tid, "responsible", name);
+    setAddingResp(null);
+    setNewRespName("");
+  };
 
   const updateEntry = (id, field, val) => {
     const updated = (record.statusHistory||[]).map(h=>h.id===id?{...h,[field]:val}:h);
@@ -526,10 +886,34 @@ function StatusHistoryEditor({ record, onUpdate }) {
     onUpdate({...record, statusHistory:(record.statusHistory||[]).filter(h=>h.id!==id)});
   };
 
+  const addState = () => {
+    const s = {id:`s${Date.now()}`, name:"", federation:"", memberStatus:"Member", inicio:"", fim:"", rep:"", email:"", tel:""};
+    onUpdate({...record, states:[...(record.states||[]), s]});
+  };
+  const updateState = (sid, field, val) => {
+    onUpdate({...record, states:(record.states||[]).map(s=>s.id===sid?{...s,[field]:val}:s)});
+  };
+  const removeState = (sid) => {
+    onUpdate({...record, states:(record.states||[]).filter(s=>s.id!==sid)});
+  };
+
+  const addTask = () => {
+    const t = {id:`t${Date.now()}`, name:"", responsible:"", start:"", deadline:"", taskStatus:"Not Started"};
+    onUpdate({...record, tasks:[...(record.tasks||[]), t]});
+  };
+  const updateTask = (tid, field, val) => {
+    onUpdate({...record, tasks:(record.tasks||[]).map(t=>t.id===tid?{...t,[field]:val}:t)});
+  };
+  const removeTask = (tid) => {
+    onUpdate({...record, tasks:(record.tasks||[]).filter(t=>t.id!==tid)});
+  };
+
   return (
     <tr>
       <td colSpan={12} style={{padding:"0 0 0 48px",background:"#f8faff",borderBottom:"2px solid #e0e7ff"}}>
         <div style={{padding:"14px 16px 14px 0"}}>
+
+          {/* ── Status History ── */}
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
             <History size={13} color="#6366f1"/>
             <span style={{fontSize:11,fontWeight:700,color:"#6366f1",textTransform:"uppercase",letterSpacing:.8}}>
@@ -579,11 +963,192 @@ function StatusHistoryEditor({ record, onUpdate }) {
 
           <button onClick={addEntry}
             style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"1px dashed #a5b4fc",borderRadius:6,
-              padding:"4px 10px",cursor:"pointer",fontSize:11,color:"#6366f1",fontWeight:600,transition:"all .15s"}}
+              padding:"4px 10px",cursor:"pointer",fontSize:11,color:"#6366f1",fontWeight:600,transition:"all .15s",marginBottom:20}}
             onMouseEnter={e=>{e.currentTarget.style.background="#eef2ff";}}
             onMouseLeave={e=>{e.currentTarget.style.background="none";}}>
             <Plus size={11}/> Add status change
           </button>
+
+          {/* ── States / Federations ── */}
+          <div style={{borderTop:"1px solid #e0e7ff",paddingTop:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <Map size={13} color="#16a34a"/>
+              <span style={{fontSize:11,fontWeight:700,color:"#16a34a",textTransform:"uppercase",letterSpacing:.8}}>
+                States & Federations — {record.country||"(no name)"}
+              </span>
+              <span style={{fontSize:10,color:"#9ca3af",background:"#dcfce7",padding:"1px 7px",borderRadius:10}}>{statesList.length} states</span>
+            </div>
+
+            {statesList.length === 0 && (
+              <div style={{fontSize:12,color:"#9ca3af",padding:"4px 0 10px",fontStyle:"italic"}}>No states added yet.</div>
+            )}
+
+            {statesList.length > 0 && (
+              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:8}}>
+                <thead>
+                  <tr>
+                    {["State / Province","Status","Federation","Entry Date","Exit Date","Representative","Email","Phone",""].map(h=>(
+                      <th key={h} style={{textAlign:"left",fontSize:10,color:"#9ca3af",fontWeight:600,padding:"4px 10px",borderBottom:"1px solid #dcfce7",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {statesList.map(st=>(
+                    <tr key={st.id} style={{borderBottom:"1px solid #f0fdf4"}}>
+                      <td style={{padding:"4px 10px",minWidth:100}}>
+                        <input value={st.name||""} onChange={e=>updateState(st.id,"name",e.target.value)} placeholder="State"
+                          style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,fontWeight:600,background:"transparent",outline:"none",width:"100%"}}/>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:120}}>
+                        <select value={st.memberStatus||"Member"} onChange={e=>updateState(st.id,"memberStatus",e.target.value)}
+                          style={{border:"1px solid #e5e7eb",borderRadius:6,padding:"2px 5px",fontSize:11,background:"#fff",cursor:"pointer",
+                            color:STATUS_CFG[st.memberStatus||"Member"]?.color,fontWeight:600}}>
+                          {Object.keys(STATUS_CFG).map(o=><option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:90}}>
+                        <input value={st.federation||""} onChange={e=>updateState(st.id,"federation",e.target.value)} placeholder="Federation"
+                          style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,color:"#16a34a",fontWeight:600,background:"transparent",outline:"none",width:"100%"}}/>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:110}}>
+                        <EditableCell value={st.inicio} type="date" onChange={val=>updateState(st.id,"inicio",val)}/>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:110}}>
+                        <EditableCell value={st.fim} type="date" onChange={val=>updateState(st.id,"fim",val)}/>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:120}}>
+                        <input value={st.rep||""} onChange={e=>updateState(st.id,"rep",e.target.value)} placeholder="Rep."
+                          style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,background:"transparent",outline:"none",width:"100%"}}/>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:140}}>
+                        <input value={st.email||""} onChange={e=>updateState(st.id,"email",e.target.value)} placeholder="Email"
+                          style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,background:"transparent",outline:"none",width:"100%"}}/>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:110}}>
+                        <input value={st.tel||""} onChange={e=>updateState(st.id,"tel",e.target.value)} placeholder="Phone"
+                          style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,background:"transparent",outline:"none",width:"100%"}}/>
+                      </td>
+                      <td style={{padding:"4px 6px",textAlign:"center"}}>
+                        <button onClick={()=>removeState(st.id)}
+                          style={{background:"none",border:"none",cursor:"pointer",color:"#e5e7eb",padding:3,borderRadius:4,display:"flex",alignItems:"center",transition:"color .1s"}}
+                          onMouseEnter={e=>e.currentTarget.style.color="#ef4444"}
+                          onMouseLeave={e=>e.currentTarget.style.color="#e5e7eb"}>
+                          <X size={12}/>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            <button onClick={addState}
+              style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"1px dashed #86efac",borderRadius:6,
+                padding:"4px 10px",cursor:"pointer",fontSize:11,color:"#16a34a",fontWeight:600,transition:"all .15s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="#dcfce7";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="none";}}>
+              <Plus size={11}/> Add state
+            </button>
+          </div>
+
+          {/* ── Tasks ── */}
+          <div style={{borderTop:"1px solid #e0e7ff",paddingTop:14,marginTop:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <Target size={13} color="#f59e0b"/>
+              <span style={{fontSize:11,fontWeight:700,color:"#b45309",textTransform:"uppercase",letterSpacing:.8}}>
+                Tasks — {record.country||"(no name)"}
+              </span>
+              <span style={{fontSize:10,color:"#9ca3af",background:"#fef3c7",padding:"1px 7px",borderRadius:10}}>{tasksList.length} tasks</span>
+              {tasksList.filter(t=>t.taskStatus!=="Done"&&t.deadline&&new Date(t.deadline)<new Date()).length>0&&(
+                <span style={{fontSize:10,color:"#dc2626",background:"#fee2e2",padding:"1px 7px",borderRadius:10,fontWeight:700}}>
+                  🔴 {tasksList.filter(t=>t.taskStatus!=="Done"&&t.deadline&&new Date(t.deadline)<new Date()).length} overdue
+                </span>
+              )}
+            </div>
+            {tasksList.length===0&&<div style={{fontSize:12,color:"#9ca3af",padding:"4px 0 10px",fontStyle:"italic"}}>No tasks added yet.</div>}
+            {tasksList.length>0&&(
+              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:8}}>
+                <thead>
+                  <tr>
+                    {["Task Name","Responsible","Start","Deadline","Status",""].map(h=>(
+                      <th key={h} style={{textAlign:"left",fontSize:10,color:"#9ca3af",fontWeight:600,padding:"4px 10px",borderBottom:"1px solid #fef3c7",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tasksList.map(t=>{
+                    const overdue = t.taskStatus!=="Done" && t.deadline && new Date(t.deadline)<new Date();
+                    return(
+                    <tr key={t.id} style={{borderBottom:"1px solid #fffbeb",background:overdue?"#fff7f7":"transparent"}}>
+                      <td style={{padding:"4px 10px",minWidth:140}}>
+                        <input value={t.name||""} onChange={e=>updateTask(t.id,"name",e.target.value)} placeholder="Task name"
+                          style={{border:"none",borderBottom:"1px solid #e5e7eb",padding:"2px 0",fontSize:12,fontWeight:600,background:"transparent",outline:"none",width:"100%"}}/>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:140}}>
+                        {addingResp===t.id ? (
+                          <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                            <input autoFocus value={newRespName} onChange={e=>setNewRespName(e.target.value)}
+                              onKeyDown={e=>{if(e.key==="Enter")confirmNewResp(t.id);if(e.key==="Escape"){setAddingResp(null);setNewRespName("");}}}
+                              placeholder="Name..."
+                              style={{border:"1px solid #60a5fa",borderRadius:6,padding:"2px 6px",fontSize:12,width:"100%",boxSizing:"border-box"}}/>
+                            <button onClick={()=>confirmNewResp(t.id)}
+                              style={{background:"#1a1a1a",color:"#fff",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:11,fontWeight:700,flexShrink:0}}>✓</button>
+                            <button onClick={()=>{setAddingResp(null);setNewRespName("");}}
+                              style={{background:"none",border:"1px solid #e5e7eb",borderRadius:5,padding:"2px 6px",cursor:"pointer",fontSize:11,color:"#9ca3af",flexShrink:0}}>✕</button>
+                          </div>
+                        ) : (
+                          <select value={t.responsible||""} onChange={e=>{
+                            if(e.target.value==="__new__"){setAddingResp(t.id);setNewRespName("");}
+                            else updateTask(t.id,"responsible",e.target.value);
+                          }}
+                          style={{border:"1px solid #e5e7eb",borderRadius:6,padding:"2px 6px",fontSize:12,background:"#fff",cursor:"pointer",width:"100%",
+                            color:t.responsible?"#374151":"#9ca3af",fontWeight:t.responsible?500:400}}>
+                            <option value="">— Select —</option>
+                            {(responsibles||[]).map(r=>(
+                              <option key={r.id} value={r.name}>{r.name}</option>
+                            ))}
+                            <option value="__new__">＋ Add new person...</option>
+                          </select>
+                        )}
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:110}}>
+                        <EditableCell value={t.start} type="date" onChange={val=>updateTask(t.id,"start",val)}/>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:110}}>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}>
+                          {overdue&&<span title="Overdue">🔴</span>}
+                          <EditableCell value={t.deadline} type="date" onChange={val=>updateTask(t.id,"deadline",val)}/>
+                        </div>
+                      </td>
+                      <td style={{padding:"4px 10px",minWidth:120}}>
+                        <select value={t.taskStatus||"Not Started"} onChange={e=>updateTask(t.id,"taskStatus",e.target.value)}
+                          style={{border:"1px solid #e5e7eb",borderRadius:6,padding:"2px 5px",fontSize:11,background:TASK_STATUS_CFG[t.taskStatus||"Not Started"]?.bg,
+                            color:TASK_STATUS_CFG[t.taskStatus||"Not Started"]?.color,fontWeight:600,cursor:"pointer"}}>
+                          {TASK_STATUS.map(o=><option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      <td style={{padding:"4px 6px",textAlign:"center"}}>
+                        <button onClick={()=>removeTask(t.id)}
+                          style={{background:"none",border:"none",cursor:"pointer",color:"#e5e7eb",padding:3,borderRadius:4,display:"flex",alignItems:"center"}}
+                          onMouseEnter={e=>e.currentTarget.style.color="#ef4444"}
+                          onMouseLeave={e=>e.currentTarget.style.color="#e5e7eb"}>
+                          <X size={12}/>
+                        </button>
+                      </td>
+                    </tr>
+                  );})}
+                </tbody>
+              </table>
+            )}
+            <button onClick={addTask}
+              style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"1px dashed #fcd34d",borderRadius:6,
+                padding:"4px 10px",cursor:"pointer",fontSize:11,color:"#b45309",fontWeight:600,transition:"all .15s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="#fef3c7";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="none";}}>
+              <Plus size={11}/> Add task
+            </button>
+          </div>
+
         </div>
       </td>
     </tr>
@@ -599,6 +1164,8 @@ function DashboardTab({ data, setData }) {
   const [sfilt, setSfilt] = useState("All Status");
   const [cfilt, setCfilt] = useState("All Continents");
   const [showTrophies, setShowTrophies] = useState(true);
+  const [showTasks, setShowTasks] = useState(true);
+  const [expandedCountry, setExpandedCountry] = useState(null);
 
   const named   = useMemo(()=>data.filter(c=>c.country),[data]);
   const chartData = useMemo(()=>buildChartData(data),[data]);
@@ -622,17 +1189,21 @@ function DashboardTab({ data, setData }) {
   }:c));
   const addRow=()=>{
     const id=Date.now();
-    const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",tournament:"",statusHistory:[]};
+    const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",tournament:"",states:[],tasks:[],statusHistory:[]};
     setData(p=>[...p,novo]); setEditModal(novo);
   };
 
   const KPI_DEFS=[
-    {key:"total",    icon:<Globe size={20} color="#6366f1"/>,         label:"Total Countries",      iconBg:"#eef2ff"},
     {key:"active",   icon:<Users size={20} color="#22c55e"/>,         label:"Active Members",       iconBg:"#dcfce7"},
     {key:"expiring", icon:<AlertTriangle size={20} color="#f59e0b"/>, label:"Expiring Memberships", iconBg:"#fef3c7"},
     {key:"expired",  icon:<XCircle size={20} color="#ef4444"/>,       label:"Expired Memberships",  iconBg:"#fee2e2"},
   ];
   const vigDot={"Active":"#22c55e","Expiring":"#f59e0b","Expired":"#ef4444"};
+
+  if(expandedCountry) {
+    const liveCountry = data.find(c=>c.id===expandedCountry.id)||expandedCountry;
+    return <CountryStateMap country={liveCountry} states={liveCountry.states||[]} onBack={()=>setExpandedCountry(null)} onSaveStates={newStates=>setData(p=>p.map(c=>c.id===liveCountry.id?{...c,states:newStates}:c))}/>;
+  }
 
   return (
     <div style={{maxWidth:1160,margin:"0 auto",padding:"32px 20px",background:"#f7f6f3"}}>
@@ -678,9 +1249,16 @@ function DashboardTab({ data, setData }) {
                 style={{accentColor:"#d4af37",width:13,height:13,cursor:"pointer"}}/>
               🏆 Tournaments
             </label>
+            <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:11,color:showTasks?"#1a1a1a":"#9ca3af",
+              padding:"4px 10px",borderRadius:20,border:"1px solid",borderColor:showTasks?"#f59e0b":"#e5e7eb",
+              background:showTasks?"#fff7ed":"#fafafa",transition:"all .2s",userSelect:"none"}}>
+              <input type="checkbox" checked={showTasks} onChange={e=>setShowTasks(e.target.checked)}
+                style={{accentColor:"#f59e0b",width:13,height:13,cursor:"pointer"}}/>
+              ⚠️ Tasks
+            </label>
           </div>
         </div>
-        <WorldMap countries={named} onCountryClick={setEditModal} showTrophies={showTrophies}/>
+        <WorldMap countries={named} onCountryClick={setEditModal} showTrophies={showTrophies} showTasks={showTasks}/>
       </div>
 
       {/* Chart — now driven by real data */}
@@ -772,13 +1350,13 @@ function DashboardTab({ data, setData }) {
       {kpiModal   &&<RecordsModal {...kpiModal}   onClose={()=>setKpiModal(null)}   onEdit={r=>{setKpiModal(null);  setEditModal(r);}}/>}
       {stairModal &&<RecordsModal {...stairModal} onClose={()=>setStairModal(null)} onEdit={r=>{setStairModal(null);setEditModal(r);}}/>}
       {chartModal &&<RecordsModal {...chartModal} onClose={()=>setChartModal(null)} onEdit={r=>{setChartModal(null);setEditModal(r);}}/>}
-      {editModal  &&<EditModal row={editModal} onClose={()=>setEditModal(null)} onSave={save}/>}
+      {editModal  &&<EditModal row={editModal} onClose={()=>setEditModal(null)} onSave={r=>{save(r);}} onExpandCountry={r=>{const saved={...r,quarter:r.inicio?quarterFromDate(r.inicio):r.quarter};setData(p=>p.map(c=>c.id===saved.id?saved:c));setExpandedCountry(saved);}}/>}
     </div>
   );
 }
 
 // ── Data Tab ───────────────────────────────────────────────────
-function DataTab({ data, setData }) {
+function DataTab({ data, setData, responsibles, setResponsibles }) {
   const [sfilt,  setSfilt]   = useState("All Status");
   const [cfilt,  setCfilt]   = useState("All Continents");
   const [search, setSearch]  = useState("");
@@ -806,7 +1384,7 @@ function DataTab({ data, setData }) {
 
   const addRow = () => {
     const id=Date.now();
-    const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",tournament:"",statusHistory:[]};
+    const novo={id,country:"",continent:"",empresa:"",memberStatus:"Needed",quarter:"",inicio:"",fim:"",rep:"",email:"",tel:"",tournament:"",states:[],tasks:[],statusHistory:[]};
     setData(p=>[...p,novo]); setEditModal(novo);
   };
 
@@ -928,7 +1506,7 @@ function DataTab({ data, setData }) {
 
                     {/* Inline history editor */}
                     {isOpen && (
-                      <StatusHistoryEditor key={`hist-${row.id}`} record={row} onUpdate={save}/>
+                      <StatusHistoryEditor key={`hist-${row.id}`} record={row} onUpdate={save} responsibles={responsibles} setResponsibles={setResponsibles}/>
                     )}
                   </>
                 );
@@ -938,15 +1516,325 @@ function DataTab({ data, setData }) {
         </div>
         {filtered.length===0&&<div style={{padding:40,textAlign:"center",color:"#9ca3af",fontSize:13}}>No records match the filters</div>}
       </div>
-      {editModal&&<EditModal row={editModal} onClose={()=>setEditModal(null)} onSave={save}/>}
+      {editModal&&<EditModal row={editModal} onClose={()=>setEditModal(null)} onSave={save} onExpandCountry={null}/>}
+    </div>
+  );
+}
+
+// ── Responsible helpers ────────────────────────────────────────
+function avatarColor(name) {
+  const colors = ["#6366f1","#f59e0b","#22c55e","#ef4444","#3b82f6","#ec4899","#8b5cf6","#14b8a6","#f97316","#64748b"];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+function initials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+}
+function Avatar({ name, size=42 }) {
+  const bg = avatarColor(name||"?");
+  return (
+    <div style={{width:size,height:size,borderRadius:"50%",background:bg,display:"flex",alignItems:"center",justifyContent:"center",
+      color:"#fff",fontWeight:700,fontSize:size*0.36,flexShrink:0,fontFamily:"'DM Sans',system-ui,sans-serif",letterSpacing:".5px"}}>
+      {initials(name)}
+    </div>
+  );
+}
+
+// ── Responsible Modal ──────────────────────────────────────────
+function ResponsibleModal({ person, onClose }) {
+  const { name, area, tasks } = person;
+
+  const total    = tasks.length;
+  const done     = tasks.filter(t => t.taskStatus === "Done").length;
+  const overdue  = tasks.filter(t => t.taskStatus !== "Done" && t.deadline && new Date(t.deadline) < TODAY).length;
+  const onTimePct   = total ? Math.round((done / total) * 100) : 0;
+  const overduePct  = total ? Math.round((overdue / total) * 100) : 0;
+
+  const sorted = [...tasks].sort((a, b) => {
+    const aOv = a.taskStatus !== "Done" && a.deadline && new Date(a.deadline) < TODAY;
+    const bOv = b.taskStatus !== "Done" && b.deadline && new Date(b.deadline) < TODAY;
+    if (aOv && !bOv) return -1;
+    if (!aOv && bOv) return 1;
+    const aStatus = ["Not Started","Doing","Done"].indexOf(a.taskStatus||"Not Started");
+    const bStatus = ["Not Started","Doing","Done"].indexOf(b.taskStatus||"Not Started");
+    return aStatus - bStatus;
+  });
+
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()}
+      style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1200,padding:16}}>
+      <div style={{background:"#fff",borderRadius:20,width:680,maxWidth:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 32px 80px rgba(0,0,0,0.22)"}}>
+
+        {/* Header */}
+        <div style={{padding:"28px 28px 20px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:18}}>
+          <Avatar name={name} size={64}/>
+          <div style={{flex:1}}>
+            <h2 style={{margin:"0 0 4px",fontSize:20,fontWeight:700,fontFamily:"'Playfair Display',Georgia,serif"}}>{name}</h2>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {area.map(a=>(
+                <span key={a} style={{background:"#f3f4f6",color:"#374151",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:600}}>{a}</span>
+              ))}
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"1px solid #e5e7eb",borderRadius:"50%",width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#6b7280",flexShrink:0}}>
+            <X size={13}/>
+          </button>
+        </div>
+
+        {/* Task Index */}
+        <div style={{padding:"18px 28px",borderBottom:"1px solid #f3f4f6",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
+          {[
+            {label:"Total Tasks",    val:total,         color:"#6366f1", bg:"#eef2ff"},
+            {label:"Done ✓",         val:`${done} (${onTimePct}%)`,  color:"#15803d", bg:"#dcfce7"},
+            {label:"Overdue 🔴",     val:`${overdue} (${overduePct}%)`, color:"#dc2626", bg:"#fee2e2"},
+          ].map(({label,val,color,bg})=>(
+            <div key={label} style={{background:bg,borderRadius:12,padding:"14px 16px",textAlign:"center"}}>
+              <div style={{fontSize:22,fontWeight:700,color,fontFamily:"'Playfair Display',Georgia,serif",lineHeight:1}}>{val}</div>
+              <div style={{fontSize:11,color,opacity:.8,marginTop:4,fontWeight:600}}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Progress bar */}
+        <div style={{padding:"12px 28px 0"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <span style={{fontSize:11,color:"#9ca3af",fontWeight:600}}>Task Index</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#15803d"}}>{onTimePct}% done</span>
+            {overduePct > 0 && <span style={{fontSize:11,fontWeight:700,color:"#dc2626"}}>{overduePct}% overdue</span>}
+          </div>
+          <div style={{height:6,background:"#f3f4f6",borderRadius:4,overflow:"hidden",display:"flex"}}>
+            <div style={{width:`${onTimePct}%`,background:"#22c55e",transition:"width .5s ease"}}/>
+            <div style={{width:`${overduePct}%`,background:"#ef4444",transition:"width .5s ease"}}/>
+          </div>
+        </div>
+
+        {/* Tasks list */}
+        <div style={{overflowY:"auto",flex:1,padding:"14px 0 0"}}>
+          <div style={{padding:"0 28px 10px",fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8}}>
+            Tasks ({total})
+          </div>
+          {sorted.length === 0 && (
+            <div style={{padding:"20px 28px",color:"#9ca3af",fontSize:13,fontStyle:"italic"}}>No tasks assigned.</div>
+          )}
+          {sorted.map(t => {
+            const isOverdue = t.taskStatus !== "Done" && t.deadline && new Date(t.deadline) < TODAY;
+            const cfg = TASK_STATUS_CFG[t.taskStatus||"Not Started"];
+            return (
+              <div key={t.id} style={{padding:"10px 28px",borderBottom:"1px solid #f9fafb",display:"flex",alignItems:"center",gap:12,
+                background:isOverdue?"#fff7f7":"transparent"}}>
+                {isOverdue && <span style={{fontSize:14,flexShrink:0}}>🔴</span>}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"#1a1a1a",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    {t.name||"(unnamed task)"}
+                  </div>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                    {t.country && <span style={{fontSize:10,color:"#6b7280",background:"#f3f4f6",borderRadius:10,padding:"1px 7px"}}>{t.country}</span>}
+                    {t.start    && <span style={{fontSize:10,color:"#9ca3af"}}>Start: {fmt(t.start)}</span>}
+                    {t.deadline && <span style={{fontSize:10,color:isOverdue?"#dc2626":"#9ca3af",fontWeight:isOverdue?700:400}}>
+                      Deadline: {fmt(t.deadline)}</span>}
+                  </div>
+                </div>
+                <span style={{background:cfg.bg,color:cfg.color,borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700,flexShrink:0}}>
+                  {t.taskStatus||"Not Started"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Responsibles Tab ───────────────────────────────────────────
+function ResponsiblesTab({ data, responsibles, setResponsibles }) {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(null);
+  const [managing, setManaging] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newArea, setNewArea] = useState("");
+
+  // Aggregate all tasks by responsible
+  const people = useMemo(() => {
+    const map = {};
+    // seed from global responsibles list so even people with 0 tasks appear
+    (responsibles||[]).forEach(r => {
+      map[r.name] = { name: r.name, area: r.area ? [r.area] : [], tasks: [], rId: r.id };
+    });
+    data.forEach(record => {
+      (record.tasks||[]).forEach(t => {
+        const name = (t.responsible||"").trim();
+        if (!name) return;
+        if (!map[name]) map[name] = { name, area: [], tasks: [] };
+        map[name].tasks.push({ ...t, country: record.country });
+      });
+    });
+    return Object.values(map).sort((a,b) => a.name.localeCompare(b.name));
+  }, [data, responsibles]);
+
+  const filtered = useMemo(() => {
+    if (!search) return people;
+    const q = search.toLowerCase();
+    return people.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.area.some(a => a.toLowerCase().includes(q))
+    );
+  }, [people, search]);
+
+  const addPerson = () => {
+    const name = newName.trim();
+    if (!name) return;
+    if ((responsibles||[]).find(r=>r.name.toLowerCase()===name.toLowerCase())) return;
+    setResponsibles(p=>[...p, {id:`r${Date.now()}`, name, area: newArea.trim()}]);
+    setNewName(""); setNewArea("");
+  };
+  const removePerson = (id) => setResponsibles(p=>p.filter(r=>r.id!==id));
+  const updateArea   = (id, area) => setResponsibles(p=>p.map(r=>r.id===id?{...r,area}:r));
+
+  return (
+    <div style={{maxWidth:1000,margin:"0 auto",padding:"32px 20px"}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h1 style={{fontSize:26,fontWeight:700,margin:"0 0 3px",fontFamily:"'Playfair Display',Georgia,serif"}}>Responsibles</h1>
+          <p style={{fontSize:12,color:"#9ca3af",margin:0,textTransform:"uppercase",letterSpacing:"1.5px",fontWeight:500}}>
+            Task owners · click a name to see full profile
+          </p>
+        </div>
+        <button onClick={()=>setManaging(m=>!m)}
+          style={{display:"flex",alignItems:"center",gap:6,background:managing?"#1a1a1a":"#f3f4f6",color:managing?"#fff":"#374151",
+            border:"none",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontSize:12,fontWeight:600}}>
+          <Users size={13}/> {managing ? "Close" : "Manage People"}
+        </button>
+      </div>
+
+      {/* ── Manage panel ── */}
+      {managing && (
+        <div style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:18,boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#6366f1",textTransform:"uppercase",letterSpacing:.8,marginBottom:12}}>People List</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+            {(responsibles||[]).map(r=>(
+              <div key={r.id} style={{display:"flex",alignItems:"center",gap:6,background:"#f8faff",border:"1px solid #e0e7ff",borderRadius:20,padding:"4px 8px 4px 10px"}}>
+                <Avatar name={r.name} size={20}/>
+                <span style={{fontSize:12,fontWeight:600,color:"#1a1a1a"}}>{r.name}</span>
+                <input value={r.area||""} onChange={e=>updateArea(r.id,e.target.value)} placeholder="area"
+                  style={{border:"none",borderBottom:"1px solid #c7d2fe",background:"transparent",outline:"none",fontSize:11,color:"#6366f1",width:80,padding:"1px 0"}}/>
+                <button onClick={()=>removePerson(r.id)}
+                  style={{background:"none",border:"none",cursor:"pointer",color:"#d1d5db",padding:2,display:"flex",alignItems:"center",borderRadius:4}}
+                  onMouseEnter={e=>e.currentTarget.style.color="#ef4444"}
+                  onMouseLeave={e=>e.currentTarget.style.color="#d1d5db"}>
+                  <X size={11}/>
+                </button>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Name"
+              onKeyDown={e=>e.key==="Enter"&&addPerson()}
+              style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"6px 12px",fontSize:12,outline:"none",width:160}}/>
+            <input value={newArea} onChange={e=>setNewArea(e.target.value)} placeholder="Area (optional)"
+              onKeyDown={e=>e.key==="Enter"&&addPerson()}
+              style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"6px 12px",fontSize:12,outline:"none",width:180}}/>
+            <button onClick={addPerson}
+              style={{display:"flex",alignItems:"center",gap:5,background:"#1a1a1a",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontSize:12,fontWeight:600}}>
+              <Plus size={12}/> Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:16}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Search by name or area..."
+          style={{flex:1,border:"1px solid #e5e7eb",borderRadius:8,padding:"7px 14px",fontSize:13,outline:"none"}}/>
+        <span style={{fontSize:11,color:"#9ca3af",background:"#f3f4f6",padding:"4px 10px",borderRadius:20}}>{filtered.length} people</span>
+      </div>
+
+      <div style={{background:"#fff",borderRadius:12,boxShadow:"0 1px 4px rgba(0,0,0,0.07)",overflow:"hidden"}}>
+        {filtered.length === 0 ? (
+          <div style={{padding:48,textAlign:"center",color:"#9ca3af",fontSize:14}}>
+            {people.length === 0 ? "No responsibles yet. Use 'Manage People' to add them." : "No results found."}
+          </div>
+        ) : (
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead style={{background:"#fafafa",borderBottom:"2px solid #f3f4f6"}}>
+              <tr>
+                {["Responsible","Area","Total","Done","Overdue",""].map(h=>(
+                  <th key={h} style={{textAlign:"left",fontSize:10,color:"#9ca3af",fontWeight:700,padding:"12px 16px",textTransform:"uppercase",letterSpacing:.6,whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p,i) => {
+                const total   = p.tasks.length;
+                const done    = p.tasks.filter(t => t.taskStatus === "Done").length;
+                const overdue = p.tasks.filter(t => t.taskStatus !== "Done" && t.deadline && new Date(t.deadline) < TODAY).length;
+                const pct = total ? Math.round((done/total)*100) : 0;
+                return (
+                  <tr key={p.name} style={{borderBottom:"1px solid #f3f4f6",background:i%2===0?"#fff":"#fafbfc",cursor:"pointer",transition:"background .1s"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#f0f7ff"}
+                    onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#fafbfc"}
+                    onClick={()=>setSelected(p)}>
+                    <td style={{padding:"12px 16px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <Avatar name={p.name} size={34}/>
+                        <span style={{fontSize:13,fontWeight:700,color:"#1a1a1a"}}>{p.name}</span>
+                      </div>
+                    </td>
+                    <td style={{padding:"12px 16px"}}>
+                      {p.area.length > 0
+                        ? <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                            {p.area.map(a=>(
+                              <span key={a} style={{background:"#f3f4f6",color:"#374151",borderRadius:20,padding:"2px 9px",fontSize:11,fontWeight:500}}>{a}</span>
+                            ))}
+                          </div>
+                        : <span style={{color:"#d1d5db",fontSize:12}}>—</span>}
+                    </td>
+                    <td style={{padding:"12px 16px",fontSize:13,fontWeight:700,color:"#6366f1"}}>{total||<span style={{color:"#d1d5db"}}>0</span>}</td>
+                    <td style={{padding:"12px 16px"}}>
+                      {total > 0
+                        ? <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:13,fontWeight:700,color:"#15803d"}}>{done}</span>
+                            <div style={{width:48,height:4,background:"#f3f4f6",borderRadius:2,overflow:"hidden"}}>
+                              <div style={{height:"100%",width:`${pct}%`,background:"#22c55e",borderRadius:2}}/>
+                            </div>
+                            <span style={{fontSize:10,color:"#9ca3af"}}>{pct}%</span>
+                          </div>
+                        : <span style={{color:"#d1d5db",fontSize:12}}>—</span>}
+                    </td>
+                    <td style={{padding:"12px 16px"}}>
+                      {overdue > 0
+                        ? <span style={{display:"flex",alignItems:"center",gap:5,fontSize:13,fontWeight:700,color:"#dc2626"}}>🔴 {overdue}</span>
+                        : <span style={{color:"#d1d5db",fontSize:13}}>—</span>}
+                    </td>
+                    <td style={{padding:"12px 16px",textAlign:"right"}}>
+                      <span style={{fontSize:11,color:"#6366f1",fontWeight:600,background:"#eef2ff",padding:"3px 10px",borderRadius:20}}>Ver perfil →</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {selected && <ResponsibleModal person={selected} onClose={()=>setSelected(null)}/>}
     </div>
   );
 }
 
 // ── Root ───────────────────────────────────────────────────────
+const INIT_RESPONSIBLES = [
+  {id:"r1", name:"Karina", area:"Operations"},
+  {id:"r2", name:"João Silva", area:"South America"},
+];
+
 export default function App() {
   const [data,setData]=useState(INIT);
   const [tab,setTab]=useState("dashboard");
+  const [responsibles, setResponsibles] = useState(INIT_RESPONSIBLES);
 
   return (
     <div style={{background:"#f7f6f3",minHeight:"100vh",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
@@ -957,7 +1845,11 @@ export default function App() {
           </div>
           <span style={{fontSize:14,fontWeight:700,color:"#1a1a1a",fontFamily:"'Playfair Display',Georgia,serif",letterSpacing:".2px"}}>WPF</span>
         </div>
-        {[{id:"dashboard",label:"Dashboard",icon:<LayoutDashboard size={14}/>},{id:"data",label:"Master Data",icon:<Database size={14}/>}].map(t=>(
+        {[
+          {id:"dashboard",    label:"Dashboard",    icon:<LayoutDashboard size={14}/>},
+          {id:"data",         label:"Master Data",  icon:<Database size={14}/>},
+          {id:"responsibles", label:"Responsibles", icon:<Users size={14}/>},
+        ].map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)}
             style={{display:"flex",alignItems:"center",gap:6,padding:"14px 14px",background:"none",border:"none",cursor:"pointer",
               fontSize:13,fontWeight:tab===t.id?600:400,color:tab===t.id?"#1a1a1a":"#9ca3af",fontFamily:"'DM Sans',system-ui,sans-serif",
@@ -966,10 +1858,9 @@ export default function App() {
           </button>
         ))}
       </div>
-      {tab==="dashboard"
-        ?<DashboardTab data={data} setData={setData}/>
-        :<DataTab      data={data} setData={setData}/>
-      }
+      {tab==="dashboard"    && <DashboardTab     data={data} setData={setData}/>}
+      {tab==="data"         && <DataTab          data={data} setData={setData} responsibles={responsibles} setResponsibles={setResponsibles}/>}
+      {tab==="responsibles" && <ResponsiblesTab  data={data} responsibles={responsibles} setResponsibles={setResponsibles}/>}
     </div>
   );
 }
