@@ -939,6 +939,16 @@ function renderMap() {
       .map(e => ({...e, score: VIZ.destaque.getScore(e)}))
       .sort((a,b) => b.score - a.score);
 
+    // Only award map medal if score is strictly unique at that position
+    function mapHasMedal(i) {
+      if (i >= ranked.length) return false;
+      const s = ranked[i].score;
+      if (s === 0) return false;
+      const prevOk = i === 0 || ranked[i-1].score > s;
+      const nextOk = i >= ranked.length-1 || s > ranked[i+1].score;
+      return prevOk && nextOk;
+    }
+
     const medalColors = [
       { emoji:'🥇', fill:'url(#grad-ouro)',   solidFill:'#854D0E', hex:'#C8960C' },
       { emoji:'🥈', fill:'url(#grad-prata)',  solidFill:'#166534', hex:'#A0A0A0' },
@@ -975,6 +985,7 @@ function renderMap() {
     }
 
     ranked.slice(0,3).forEach((e,i) => {
+      if (!mapHasMedal(i)) return; // skip if tied
       const med = medalColors[i];
       // Color the state path with metallic gradient
       const path = document.querySelector(`.st[data-uf="${e.uf}"]`);
@@ -1654,12 +1665,22 @@ function renderDestaqueRanking() {
 
   const ranked = all27.filter(e => e.nome);
 
-  const medal = (i) => i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+  // Medal only when score is strictly unique at that position (no ties)
+  function hasMedal(i) {
+    if (i >= ranked.length) return false;
+    const s = ranked[i].score;
+    if (s === 0) return false;
+    const prevOk = i === 0 || ranked[i-1].score > s;
+    const nextOk = i >= ranked.length-1 || s > ranked[i+1].score;
+    return prevOk && nextOk;
+  }
+
+  const medal = (i) => hasMedal(i) ? (i===0?'🥇':i===1?'🥈':'🥉') : '';
 
   const medalStyle = (i) => {
-    if(i===0) return {bg:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',border:'#F5C842',color:'#92400E',label:'Ouro'};
-    if(i===1) return {bg:'linear-gradient(135deg,#F0F4FF,#DDE6F5)',border:'#A8BDD8',color:'#2C4A6E',label:'Prata'};
-    if(i===2) return {bg:'linear-gradient(135deg,#FDF6EE,#F5E6D0)',border:'#CD7F32',color:'#7C3400',label:'Bronze'};
+    if(i===0 && hasMedal(0)) return {bg:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',border:'#F5C842',color:'#92400E',label:'Ouro'};
+    if(i===1 && hasMedal(1)) return {bg:'linear-gradient(135deg,#F0F4FF,#DDE6F5)',border:'#A8BDD8',color:'#2C4A6E',label:'Prata'};
+    if(i===2 && hasMedal(2)) return {bg:'linear-gradient(135deg,#FDF6EE,#F5E6D0)',border:'#CD7F32',color:'#7C3400',label:'Bronze'};
     return {bg:'#FAFBFC',border:'#EEF0F3',color:'var(--txt2)',label:''};
   };
 
@@ -1679,14 +1700,14 @@ function renderDestaqueRanking() {
       ${ranked.slice(0,5).map((fed,i) => {
         const ms = medalStyle(i);
         const pct = Math.round(fed.score/MAX*100);
-        const isTop3 = i < 3;
+        const isMedal = hasMedal(i);
         return `
         <div style="display:flex;align-items:center;gap:9px;background:${ms.bg};border:1.5px solid ${ms.border};border-radius:8px;padding:8px 10px">
-          <span style="font-size:${isTop3?'18px':'12px'};min-width:20px;text-align:center;line-height:1">${medal(i)||`<span style='font-family:"DM Mono",monospace;font-size:11px;font-weight:700;color:var(--txt3)'>${i+1}</span>`}</span>
+          <span style="font-size:${isMedal?'18px':'12px'};min-width:20px;text-align:center;line-height:1">${medal(i)||`<span style='font-family:"DM Mono",monospace;font-size:11px;font-weight:700;color:var(--txt3)'>${i+1}</span>`}</span>
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:baseline;gap:5px">
               <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--txt)">${fed.uf}</span>
-              ${isTop3?`<span style="font-size:9px;font-weight:700;color:${ms.color};background:${ms.border}33;padding:1px 5px;border-radius:6px">${ms.label}</span>`:''}
+              ${isMedal && ms.label?`<span style="font-size:9px;font-weight:700;color:${ms.color};background:${ms.border}33;padding:1px 5px;border-radius:6px">${ms.label}</span>`:''}
             </div>
             <div style="font-size:10px;color:var(--txt3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">${(fed.nome||'').replace(/^Fed\.\s*/i,'').replace(/^Federação\s*/i,'')}</div>
           </div>
@@ -1708,9 +1729,9 @@ function renderDestaqueRanking() {
         const pct = Math.round(e.score/MAX*100);
         const rankedPos = ranked.indexOf(e);
         const posLabel = e.nome
-          ? (rankedPos < 3 ? medal(rankedPos) : `<span style='font-family:"DM Mono",monospace;font-size:10px;color:var(--txt3);font-weight:700'>${rankedPos+1}º</span>`)
+          ? (hasMedal(rankedPos) ? medal(rankedPos) : `<span style='font-family:"DM Mono",monospace;font-size:10px;color:var(--txt3);font-weight:700'>${rankedPos+1}º</span>`)
           : '<span style="color:var(--txt3);font-size:10px">—</span>';
-        const rowBg = rankedPos===0?'#FFFBEB':rankedPos===1?'#F0F4FF':rankedPos===2?'#FDF6EE':'var(--surface)';
+        const rowBg = (rankedPos===0&&hasMedal(0))?'#FFFBEB':(rankedPos===1&&hasMedal(1))?'#F0F4FF':(rankedPos===2&&hasMedal(2))?'#FDF6EE':'var(--surface)';
         return `
         <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:${rowBg}">
           <span style="font-size:11px;min-width:20px;text-align:center;line-height:1">${posLabel}</span>
