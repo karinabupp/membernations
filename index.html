@@ -1,13 +1,2421 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WPF Member Nations</title>
-    <style>* { margin: 0; padding: 0; box-sizing: border-box; }</style>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBTH — Programa de Excelência</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#F7F8FA; --surface:#fff; --surface2:#F1F4F8;
+  --border:#E4E8EF; --border2:#CDD5E0;
+  --txt:#0D1117; --txt2:#4A5568; --txt3:#9AA3B2;
+  --green:#16A34A; --green-mid:#22C55E; --green-bg:#DCFCE7;
+  --blue:#1D4ED8; --blue-mid:#3B82F6; --blue-bg:#DBEAFE;
+  --amber:#B45309; --amber-mid:#F59E0B; --amber-bg:#FEF3C7;
+  --red:#B91C1C; --red-mid:#EF4444; --red-bg:#FEE2E2;
+  --yellow-mid:#EAB308; --yellow-bg:#FEF9C3;
+  --radius:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+
+/* TOPBAR */
+.topbar{height:56px;background:var(--surface);border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:200}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:34px;height:34px;background:var(--txt);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:#fff}
+.brand-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700}
+.brand-sub{font-size:11px;color:var(--txt3);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.live-pill{display:flex;align-items:center;gap:5px;border:1px solid #BBF7D0;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--green);background:var(--green-bg)}
+.live-dot{width:6px;height:6px;background:var(--green-mid);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.date-txt{font-size:11px;color:var(--txt3);font-family:'DM Mono',monospace}
+
+/* NAV */
+.nav{background:var(--surface);border-bottom:1.5px solid var(--border);display:flex;padding:0 28px}
+.nav-tab{display:flex;align-items:center;gap:6px;padding:12px 18px;font-size:13px;font-weight:500;color:var(--txt3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1.5px}
+.nav-tab:hover{color:var(--txt2)}
+.nav-tab.active{color:var(--txt);border-bottom-color:var(--txt);font-weight:600}
+
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
+
+/* ── FED PAGE LAYOUT ── */
+.fed-layout{display:flex;height:calc(100vh - 108px);overflow:hidden}
+
+/* LEFT: viz tabs */
+.viz-side-panel{width:185px;flex-shrink:0;background:var(--surface);border-right:1.5px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.viz-side-header{padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.viz-side-header h2{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px}
+.viz-side-header span{font-size:11px;color:var(--txt3)}
+.viz-side-label{font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.7px;padding:10px 16px 6px}
+.viz-side-tabs{display:flex;flex-direction:column;gap:3px;padding:0 10px 12px}
+.viz-tab{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;border:1px solid transparent;font-size:12px;font-weight:500;color:var(--txt2);cursor:pointer;transition:all .15s;background:transparent;white-space:nowrap;width:100%}
+.viz-tab:hover{background:var(--surface2);color:var(--txt)}
+.viz-tab.active{background:var(--txt);border-color:var(--txt);color:#fff;font-weight:600}
+.vt-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* CENTER: map */
+.map-panel{display:flex;flex-direction:column;flex:1;min-width:0;background:var(--surface);overflow:hidden}
+
+/* RIGHT: sidebar — always visible */
+.sidebar-col{width:300px;flex-shrink:0;border-left:1.5px solid var(--border);background:var(--surface);overflow-y:auto;display:flex;flex-direction:column}
+
+/* No special destaque layout needed */
+.fed-layout.destaque-active .sidebar-col{display:flex}
+.ranking-panel{display:none}
+.map-viz-row{display:contents}
+/* MAP CANVAS */
+.map-canvas{flex:1;position:relative;overflow:hidden;background:#E8F0F7}
+.map-canvas::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(100,140,180,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(100,140,180,0.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* Brazil SVG overlay */
+#brazil-overlay{position:absolute;z-index:2;pointer-events:none}
+#brazil-overlay svg{display:block}
+.st{cursor:pointer;pointer-events:all;transition:filter .15s,opacity .15s;stroke:#1a1a1a;stroke-width:1.2;stroke-linejoin:round}
+.st:hover{filter:brightness(.82) saturate(1.2)}
+
+/* Emoji overlay */
+#emoji-layer{position:absolute;z-index:3;pointer-events:none}
+
+/* Tooltip */
+#map-tooltip{position:fixed;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .12s;z-index:999;min-width:170px;box-shadow:var(--shadow-md)}
+.tt-uf{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--txt)}
+.tt-nome{font-size:11px;color:var(--txt3);margin-bottom:7px;margin-top:1px}
+.tt-row{display:flex;align-items:flex-start;gap:6px;margin-top:4px;font-size:11px}
+.tt-icon{width:14px;flex-shrink:0;text-align:center}
+.tt-key{color:var(--txt3);min-width:65px}
+.tt-val{color:var(--txt);font-weight:500}
+
+/* Stats overlay inside map canvas */
+#map-stats-overlay{position:absolute;bottom:52px;right:12px;z-index:10;display:flex;flex-direction:column;gap:4px;pointer-events:none;max-width:180px}
+.mso-item{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.82);backdrop-filter:blur(8px);border:1px solid rgba(0,0,0,0.06);border-radius:6px;padding:4px 8px;font-size:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.mso-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.mso-label{color:var(--txt2);font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mso-pct{font-family:'DM Mono',monospace;font-weight:700;font-size:10px;flex-shrink:0}
+
+/* Monthly progression chart panel */
+.map-chart-panel{border-top:1.5px solid var(--border);background:var(--surface);flex-shrink:0}
+.map-chart-header{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border)}
+.map-chart-header:hover{background:var(--surface2)}
+#chart-body{transition:all .2s}
+
+/* Legend */
+.map-legend{padding:9px 20px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2)}
+.legend-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+
+/* SIDEBAR SECTIONS */
+.sidebar-section{padding:14px 16px;border-bottom:1px solid var(--border)}
+.section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:10px;font-family:'Syne',sans-serif}
+
+/* CNPJ accordion */
+.cnpj-list{display:flex;flex-direction:column;gap:0}
+.cnpj-accordion{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:5px;cursor:pointer}
+.cnpj-acc-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;transition:background .1s}
+.cnpj-acc-header:hover{background:var(--surface2)}
+.cnpj-acc-left{display:flex;align-items:center;gap:8px}
+.cnpj-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cnpj-name{font-size:12px;font-weight:500;color:var(--txt)}
+.cnpj-bar-wrap{width:80px;height:4px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:3px}
+.cnpj-bar-inner{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.cnpj-count{font-family:'Syne',sans-serif;font-size:14px;font-weight:700}
+.cnpj-chevron{transition:transform .2s;flex-shrink:0;color:var(--txt3)}
+.cnpj-dropdown{display:none;border-top:1px solid var(--border);background:var(--surface2);max-height:160px;overflow-y:auto}
+.cnpj-dd-row{display:flex;align-items:center;gap:6px;padding:6px 10px 6px 18px;border-bottom:1px solid var(--border);font-size:11px}
+.cnpj-dd-row:last-child{border-bottom:none}
+
+/* Digital sidebar */
+.dig-stat-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.dig-stat-row:last-child{border-bottom:none}
+.dig-stat-left{display:flex;align-items:center;gap:7px}
+.dig-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dig-count{font-family:'Syne',sans-serif;font-weight:700;font-size:13px}
+.ai-analyze-btn{display:flex;align-items:center;gap:6px;justify-content:center;background:var(--txt);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Instrument Sans',sans-serif;width:100%;margin-top:6px;transition:opacity .15s}
+.ai-analyze-btn:hover{opacity:.85}
+.ai-analyze-btn:disabled{opacity:.5;cursor:not-allowed}
+.ai-result{margin-top:8px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--txt2);line-height:1.6;max-height:200px;overflow-y:auto;display:none}
+.dig-sub-btn{padding:4px 10px;border-radius:16px;border:1px solid var(--border2);background:var(--surface);color:var(--txt2);font-size:11px;font-weight:500;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:all .15s}
+.dig-sub-btn:hover{border-color:var(--txt3);color:var(--txt)}
+.dig-sub-btn.active{background:var(--txt);border-color:var(--txt);color:#fff;font-weight:600}
+
+/* DADOS PAGE */
+.dados-page{padding:20px 24px}
+.dados-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.filter-chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--txt2);transition:all .15s;white-space:nowrap}
+.chip.active{background:var(--txt);color:#fff;border-color:var(--txt)}
+.chip:hover:not(.active){background:var(--surface2)}
+.search-wrap{display:flex;align-items:center;gap:7px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);padding:0 11px;height:32px}
+.search-wrap input{border:none;outline:none;font-family:'Instrument Sans',sans-serif;font-size:13px;color:var(--txt);background:transparent;width:180px}
+.search-wrap input::placeholder{color:var(--txt3)}
+.table-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.table-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.table-card-header h2{font-family:'Syne',sans-serif;font-size:13px;font-weight:700}
+.table-card-header p{font-size:11px;color:var(--txt3);margin-top:2px}
+table{width:100%;border-collapse:collapse}
+thead th{padding:9px 13px;text-align:left;font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{transition:background .1s}
+tbody tr:hover{background:var(--surface2)}
+tbody td{padding:10px 13px;font-size:12px;border-bottom:1px solid var(--border);color:var(--txt2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+.td-uf{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--txt)}
+
+/* Historico matrix */
+.hist-cat-btn{padding:4px 10px;border-radius:16px;border:1.5px solid var(--border2);background:var(--surface);color:var(--txt2);font-size:11px;font-weight:500;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:all .15s}
+.hist-cat-btn:hover{border-color:var(--txt3)}
+.hist-cat-btn.active{font-weight:700}
+.hcell{min-width:90px;padding:0;border:1px solid var(--border);text-align:center;position:relative;cursor:pointer}
+.hcell-inner{display:flex;align-items:center;justify-content:center;padding:5px 6px;font-size:11px;font-weight:600;border-radius:5px;margin:2px;white-space:nowrap;transition:filter .1s;position:relative;z-index:1}
+.hcell-inner:hover{filter:brightness(.9)}
+.hcell select{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+.hrow-uf{width:36px;min-width:36px;padding:5px 6px;font-family:'DM Mono',monospace;font-size:11px;font-weight:700;text-align:center;border-right:1px solid var(--border);position:sticky;left:0;background:var(--surface);z-index:4}
+.hrow-label{min-width:120px;max-width:140px;padding:5px 8px;font-size:11px;font-weight:500;color:var(--txt2);border-right:1.5px solid var(--border);position:sticky;left:36px;background:var(--surface);z-index:4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcol-month{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);white-space:nowrap;text-align:center;min-width:90px}
+.hcol-month.cur{background:var(--txt);color:#fff}
+.hcol-uf{width:36px;min-width:36px;padding:7px 6px;background:var(--surface2);border:1px solid var(--border);position:sticky;left:0;z-index:5}
+.hcol-nome{min-width:120px;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);position:sticky;left:36px;z-index:5}
+.badge{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600}
+.badge-norte{background:#DBEAFE;color:#1D4ED8}
+.badge-nordeste{background:#FEF3C7;color:#92400E}
+.badge-co{background:#F3E8FF;color:#6D28D9}
+.badge-sudeste{background:#DCFCE7;color:#15803D}
+.badge-sul{background:#F1F5F9;color:#475569}
+.cell-add{color:var(--txt3);font-size:11px}
+.empty-row td{text-align:center;padding:36px;color:var(--txt3)}
+[contenteditable]:focus{outline:2px solid var(--blue-mid);outline-offset:1px;border-radius:3px;background:var(--blue-bg);padding:1px 3px}
+.sel-field{appearance:none;border:1px solid var(--border2);border-radius:5px;background:var(--surface);color:var(--txt2);font-family:inherit;font-size:11px;padding:3px 18px 3px 7px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239AA3B2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 5px center;outline:none;max-width:130px}
+.sel-field:focus{border-color:var(--blue-mid)}
+.sel-ai-estado{appearance:none;border:1px solid var(--border2);border-radius:6px;background:var(--surface);color:var(--txt2);font-family:inherit;font-size:12px;padding:6px 24px 6px 10px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239AA3B2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;outline:none;width:100%}
+
+/* Destaque tab special styling */
+.viz-tab[data-viz="destaque"] { font-family:'Syne',sans-serif; }
+.viz-tab[data-viz="destaque"]:not(.active) { background:rgba(201,168,76,0.06); border-color:rgba(201,168,76,0.3); color:#B8860B; }
+.viz-tab[data-viz="destaque"]:not(.active):hover { background:rgba(201,168,76,0.12); border-color:#C9A84C; }
+.viz-tab[data-viz="destaque"].active { background:linear-gradient(135deg,#1a1a2e,#16213e); border-color:#C9A84C; color:#C9A84C; }
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">CB</div>
+    <div>
+      <div class="brand-name">CBTH · Programa de Excelência</div>
+      <div class="brand-sub">Gestão de Federações · 27 Estados</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="live-pill"><div class="live-dot"></div>Live</div>
+    <span class="date-txt" id="current-date"></span>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nav-tab active" data-page="federacoes">🗺 Federações</div>
+  <div class="nav-tab" data-page="dados">📋 Cadastro</div>
+  <div class="nav-tab" data-page="historico">📅 Histórico Mensal</div>
+  <div style="margin-left:auto;display:flex;align-items:center;padding:0 20px">
+    <span id="sync-status" style="font-size:11px;font-weight:500;transition:color .3s"></span>
+  </div>
+</div>
+
+<!-- ═══ PAGE: FEDERAÇÕES ═══ -->
+<div class="page active" id="page-federacoes">
+  <div class="fed-layout">
+
+    <!-- MAP + VIZ TABS ROW -->
+    <div class="map-viz-row">
+
+      <!-- VIZ TABS SIDE PANEL -->
+      <div class="viz-side-panel">
+        <div class="viz-side-header">
+          <h2>Brasil · Federações</h2>
+          <span id="viz-active-label">Federação Destaque</span>
+        </div>
+        <div class="viz-side-label">Camada de visualização</div>
+        <div class="viz-side-tabs">
+          <div class="viz-tab active" data-viz="destaque"><span style="font-size:13px">🏆</span>Federação Destaque</div>
+          <div class="viz-tab" data-viz="gestao"><span class="vt-dot" style="background:#1D4ED8"></span>Gestão &amp; Esportividade</div>
+          <div class="viz-tab" data-viz="cbth"><span class="vt-dot" style="background:#16A34A"></span>CBTH pelo Brasil</div>
+          <div class="viz-tab" data-viz="digital"><span class="vt-dot" style="background:#6B21A8"></span>Presença Digital</div>
+          <div class="viz-tab" data-viz="diversidade"><span class="vt-dot" style="background:#EAB308"></span>Diversidade &amp; Inclusão</div>
+          <div class="viz-tab" data-viz="banco"><span class="vt-dot" style="background:#78350F"></span>Banco de Dados</div>
+        </div>
+      </div>
+
+      <!-- MAP -->
+      <div class="map-panel">
+
+      <div class="map-canvas" id="map-canvas">
+        <div id="map-tooltip">
+          <div class="tt-uf" id="tt-uf"></div>
+          <div class="tt-nome" id="tt-nome"></div>
+          <div id="tt-details"></div>
+        </div>
+        <!-- Stats overlay inside map -->
+        <div id="map-stats-overlay"></div>
+
+        <!-- Brazil SVG states overlay -->
+        <div id="brazil-overlay">
+          <svg id="brazil-svg" xmlns="http://www.w3.org/2000/svg">
+            <!-- Accurate Brazil state paths, viewBox 0 0 1000 1100 -->
+            <!-- RR -->
+            <path class="st" data-uf="RR" d="M230,52 L265,38 L312,46 L340,66 L348,102 L322,128 L282,134 L248,116 L224,90 Z"/>
+            <!-- AP -->
+            <path class="st" data-uf="AP" d="M380,36 L412,28 L440,38 L456,58 L452,86 L428,100 L400,94 L378,72 Z"/>
+            <!-- AM -->
+            <path class="st" data-uf="AM" d="M100,94 L148,80 L190,76 L224,90 L248,116 L282,134 L322,128 L348,102 L362,138 L368,176 L350,216 L358,260 L330,284 L284,292 L242,272 L196,280 L162,260 L126,228 L96,192 L84,148 Z"/>
+            <!-- PA -->
+            <path class="st" data-uf="PA" d="M362,66 L400,58 L428,66 L440,86 L452,86 L456,58 L480,54 L514,62 L552,78 L586,104 L598,142 L578,182 L558,204 L520,218 L482,214 L454,224 L424,212 L400,218 L378,208 L358,260 L350,216 L368,176 L362,138 L348,102 Z"/>
+            <!-- MA -->
+            <path class="st" data-uf="MA" d="M558,204 L578,182 L598,142 L634,154 L654,184 L646,228 L620,250 L584,252 L564,234 Z"/>
+            <!-- PI -->
+            <path class="st" data-uf="PI" d="M646,228 L654,184 L634,154 L664,158 L692,184 L696,226 L674,258 L648,254 Z"/>
+            <!-- CE -->
+            <path class="st" data-uf="CE" d="M692,184 L726,176 L758,190 L762,222 L740,244 L710,246 L688,232 Z"/>
+            <!-- RN -->
+            <path class="st" data-uf="RN" d="M758,190 L796,184 L818,202 L808,232 L774,236 L756,220 Z"/>
+            <!-- PB -->
+            <path class="st" data-uf="PB" d="M774,236 L808,232 L824,248 L810,266 L778,270 L762,254 Z"/>
+            <!-- PE -->
+            <path class="st" data-uf="PE" d="M710,246 L740,244 L762,254 L778,270 L810,266 L826,248 L838,262 L802,280 L748,282 L708,270 L694,256 Z"/>
+            <!-- AL -->
+            <path class="st" data-uf="AL" d="M802,280 L838,262 L850,280 L838,298 L808,298 L794,284 Z"/>
+            <!-- SE -->
+            <path class="st" data-uf="SE" d="M808,298 L838,298 L846,316 L828,328 L806,318 Z"/>
+            <!-- BA -->
+            <path class="st" data-uf="BA" d="M584,252 L620,250 L646,254 L674,258 L694,256 L708,270 L748,282 L802,280 L794,284 L808,298 L806,318 L828,328 L820,362 L790,394 L756,416 L716,428 L678,422 L640,404 L610,374 L588,336 L580,296 Z"/>
+            <!-- TO -->
+            <path class="st" data-uf="TO" d="M482,214 L520,218 L558,204 L564,234 L580,296 L568,336 L544,356 L518,346 L500,318 L494,276 Z"/>
+            <!-- RO -->
+            <path class="st" data-uf="RO" d="M196,280 L242,272 L284,292 L300,336 L282,370 L248,384 L210,372 L184,342 L178,304 Z"/>
+            <!-- AC -->
+            <path class="st" data-uf="AC" d="M84,290 L116,272 L162,260 L196,280 L178,304 L184,342 L152,356 L110,338 L80,312 Z"/>
+            <!-- MT -->
+            <path class="st" data-uf="MT" d="M284,292 L330,284 L358,260 L378,208 L400,218 L424,212 L454,224 L482,214 L494,276 L500,318 L518,346 L510,388 L480,412 L442,422 L404,410 L368,388 L342,358 L316,326 L300,336 Z"/>
+            <!-- GO -->
+            <path class="st" data-uf="GO" d="M500,318 L518,346 L544,356 L568,336 L580,296 L588,336 L578,368 L552,390 L520,400 L490,390 L472,370 L480,356 L510,388 Z"/>
+            <!-- DF -->
+            <path class="st" data-uf="DF" d="M546,368 L558,364 L562,378 L550,382 L540,374 Z"/>
+            <!-- MG -->
+            <path class="st" data-uf="MG" d="M552,390 L578,368 L588,336 L610,374 L640,404 L678,422 L688,452 L672,486 L644,508 L610,520 L570,522 L536,508 L510,486 L506,460 L520,438 L520,400 Z"/>
+            <!-- ES -->
+            <path class="st" data-uf="ES" d="M678,422 L716,428 L726,452 L716,484 L688,496 L666,480 L648,456 L652,434 Z"/>
+            <!-- RJ -->
+            <path class="st" data-uf="RJ" d="M612,522 L644,508 L672,486 L688,496 L678,524 L654,538 L624,534 Z"/>
+            <!-- SP -->
+            <path class="st" data-uf="SP" d="M490,390 L520,400 L520,438 L506,460 L510,486 L494,502 L460,514 L424,514 L392,498 L372,472 L380,446 L398,428 L426,418 L458,408 Z"/>
+            <!-- MS -->
+            <path class="st" data-uf="MS" d="M342,358 L368,388 L404,410 L442,422 L458,408 L426,418 L398,428 L380,446 L372,472 L348,468 L318,446 L298,414 L298,380 L316,360 Z"/>
+            <!-- PR -->
+            <path class="st" data-uf="PR" d="M372,472 L392,498 L424,514 L428,532 L404,548 L372,546 L340,530 L324,506 L328,482 L342,468 Z"/>
+            <!-- SC -->
+            <path class="st" data-uf="SC" d="M328,506 L340,530 L372,546 L404,548 L410,566 L394,580 L362,580 L330,564 L314,542 L314,518 Z"/>
+            <!-- RS -->
+            <path class="st" data-uf="RS" d="M314,542 L330,564 L362,580 L394,580 L402,600 L386,622 L354,630 L318,618 L290,596 L280,568 L286,544 Z"/>
+          </svg>
+        </div>
+
+        <!-- Emoji overlay -->
+        <div id="emoji-layer"></div>
+      </div>
+
+      <div class="map-legend" id="map-legend"></div>
+
+      <!-- MONTHLY PROGRESSION CHART -->
+      <div class="map-chart-panel" id="map-chart-panel">
+        <div class="map-chart-header" onclick="toggleChart()">
+          <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--txt2)">📈 Progressão Mensal</span>
+          <span id="chart-toggle-icon" style="font-size:11px;color:var(--txt3)">▲</span>
+        </div>
+        <div id="chart-body" style="padding:8px 20px 14px">
+          <canvas id="progression-chart" height="72"></canvas>
+        </div>
+      </div>
+      </div><!-- /map-panel -->
+
+      <!-- SIDEBAR (non-destaque views, inside map-viz-row) -->
+      <div class="sidebar sidebar-col" id="sidebar">
+
+        <!-- Federação Destaque sidebar (ranking + top 5) -->
+        <div class="sidebar-section" id="sidebar-destaque" style="padding:0;flex:1;overflow-y:auto;display:block">
+          <div id="destaque-content"></div>
+        </div>
+
+      <!-- Gestão sidebar (CNPJ accordion) -->
+      <div class="sidebar-section" id="sidebar-gestao">
+        <div class="section-title">Status CNPJ · 27 Estados</div>
+        <div id="cnpj-status-list"></div>
+      </div>
+
+      <!-- Digital sidebar -->
+      <div class="sidebar-section" id="sidebar-digital" style="display:none">
+        <div class="section-title">Presença Digital · 27 Estados</div>
+        <!-- Sub-layer selector tabs -->
+        <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap">
+          <button class="dig-sub-btn active" data-sub="ig_status" onclick="setDigSub(this,'ig_status')">Instagram</button>
+          <button class="dig-sub-btn" data-sub="div" onclick="setDigSub(this,'div')">Divulgação</button>
+          <button class="dig-sub-btn" data-sub="marca" onclick="setDigSub(this,'marca')">Marca CBTH</button>
+        </div>
+        <div id="digital-breakdown"></div>
+        <div style="margin-top:14px">
+          <div class="section-title" style="margin-bottom:5px">Analisar com IA</div>
+          <div style="font-size:11px;color:var(--txt3);line-height:1.5;margin-bottom:8px">Selecione um estado com Instagram. A IA classifica status IG, divulgação e uso da marca CBTH automaticamente.</div>
+          <select class="sel-ai-estado" id="ai-estado-select"><option value="">Selecionar estado...</option></select>
+          <button class="ai-analyze-btn" id="ai-btn" onclick="runDigitalAnalysis()">✦ Analisar com IA</button>
+          <div class="ai-result" id="ai-result"></div>
+        </div>
+      </div>
+
+      <!-- Diversidade sidebar -->
+      <div class="sidebar-section" id="sidebar-diversidade" style="display:none">
+        <div class="section-title">Diversidade &amp; Inclusão · 27 Estados</div>
+        <div id="div-breakdown"></div>
+        <div style="margin-top:14px">
+          <div class="section-title" style="margin-bottom:5px">Analisar com IA</div>
+          <div style="font-size:11px;color:var(--txt3);line-height:1.5;margin-bottom:8px">Selecione um estado. A IA pesquisa no Instagram e internet por ações de inclusão, representatividade e diversidade da federação e classifica automaticamente.</div>
+          <select class="sel-ai-estado" id="div-estado-select"><option value="">Selecionar estado...</option></select>
+          <button class="ai-analyze-btn" id="div-ai-btn" onclick="runDiversidadeAnalysis()">✦ Analisar com IA</button>
+          <div class="ai-result" id="div-ai-result"></div>
+        </div>
+      </div>
+
+      <!-- CBTH pelo Brasil sidebar -->
+      <div class="sidebar-section" id="sidebar-cbth" style="display:none">
+        <div class="section-title">CBTH pelo Brasil · 27 Estados</div>
+        <div id="cbth-breakdown"></div>
+        <div style="margin-top:14px">
+          <div class="section-title" style="margin-bottom:5px">Analisar com IA</div>
+          <div style="font-size:11px;color:var(--txt3);line-height:1.5;margin-bottom:8px">Selecione um estado. A IA pesquisa na internet por evidências das 4 ações CBTH: evento com logo, ativação com atleta, palestra/painel e evento Start.</div>
+          <select class="sel-ai-estado" id="cbth-estado-select"><option value="">Selecionar estado...</option></select>
+          <button class="ai-analyze-btn" id="cbth-ai-btn" onclick="runCbthAnalysis()">✦ Analisar com IA</button>
+          <div class="ai-result" id="cbth-ai-result"></div>
+        </div>
+      </div>
+
+      <!-- Banco de Dados sidebar -->
+      <div class="sidebar-section" id="sidebar-banco" style="display:none">
+        <div class="section-title">Banco de Jogadores · 27 Estados</div>
+        <div id="banco-jog-summary"></div>
+      </div>
+
+    </div><!-- /sidebar -->
+
+    </div><!-- /map-viz-row -->
+
+    <!-- RANKING PANEL (destaque only, below map+viz-tabs row) -->
+    <div class="ranking-panel" id="ranking-panel">
+      <div id="ranking-panel-content"></div>
+    </div>
+
+  </div><!-- /fed-layout -->
+</div>
+
+<!-- ═══ PAGE: DADOS ═══ -->
+<div class="page" id="page-dados">
+  <div class="dados-page">
+    <div class="dados-controls">
+      <div class="filter-chips">
+        <div class="chip active" data-region="Todos">Todos</div>
+        <div class="chip" data-region="Norte">Norte</div>
+        <div class="chip" data-region="Nordeste">Nordeste</div>
+        <div class="chip" data-region="Centro-Oeste">Centro-Oeste</div>
+        <div class="chip" data-region="Sudeste">Sudeste</div>
+        <div class="chip" data-region="Sul">Sul</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="search-wrap">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#9AA3B2" stroke-width="1.5"/><path d="M13.5 13.5L17 17" stroke="#9AA3B2" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" id="search-input" placeholder="Buscar estado...">
+        </div>
+        <span style="font-size:11px;color:var(--txt3)">💡 Clique para editar</span>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-card-header">
+        <div><h2>Cadastro · Federações</h2><p>Dados fixos de cada federação · Editáveis</p></div>
+        <span id="table-badge" style="font-size:11px;color:var(--txt3);font-family:'DM Mono',monospace">27 estados</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>UF</th><th>Região</th><th>Federação</th><th>Responsável</th>
+            <th>E-mail</th><th>WhatsApp</th><th>Instagram</th>
+            <th>Website</th><th>Torneio 1</th><th>Torneio 2</th>
+          </tr></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAGE: HISTÓRICO MENSAL ═══ -->
+<div class="page" id="page-historico">
+  <div style="height:calc(100vh - 108px);display:flex;flex-direction:column;overflow:hidden">
+
+    <!-- Top bar -->
+    <div style="padding:12px 24px;background:var(--surface);border-bottom:1.5px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0">
+
+      <!-- Month selector view -->
+      <div id="hist-view-months" style="display:flex;flex:1;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--txt)">Histórico Mensal</div>
+        <div id="hist-month-pills" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <input type="month" id="hist-new-month" style="border:1px solid var(--border2);border-radius:7px;padding:5px 9px;font-family:inherit;font-size:11px;color:var(--txt);background:var(--surface);outline:none">
+          <button onclick="addHistMes()" style="background:var(--txt);color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">+ Mês</button>
+          <button onclick="snapshotMesAtual()" style="background:var(--surface2);color:var(--txt2);border:1px solid var(--border2);border-radius:7px;padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">⚡ Snapshot atual</button>
+        </div>
+      </div>
+
+      <!-- Matrix view header -->
+      <div id="hist-view-matrix-bar" style="display:none;flex:1;align-items:center;gap:10px;flex-wrap:wrap">
+        <button onclick="voltarMeses()" style="background:none;border:1px solid var(--border2);border-radius:7px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;color:var(--txt2);font-family:inherit">← Voltar</button>
+        <span id="hist-matrix-title" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--txt)"></span>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-left:8px" id="hist-cat-btns">
+          <button id="hist-cat-cnpj"      class="hist-cat-btn active" onclick="setHistCat('cnpj')"          style="background:#1D4ED8;color:#fff">CNPJ</button>
+          <button id="hist-cat-ig"        class="hist-cat-btn" onclick="setHistCat('ig_status')"            >Status IG</button>
+          <button id="hist-cat-div"       class="hist-cat-btn" onclick="setHistCat('div')"                  >Divulgação</button>
+          <button id="hist-cat-marca"     class="hist-cat-btn" onclick="setHistCat('marca')"                >Marca CBTH</button>
+          <button id="hist-cat-inclusao"  class="hist-cat-btn" onclick="setHistCat('inclusao')"             >Inclusão</button>
+          <button id="hist-cat-cbth_ev_logo"  class="hist-cat-btn" onclick="setHistCat('cbth_ev_logo')"    >Ev. c/ Logo</button>
+          <button id="hist-cat-cbth_atleta"   class="hist-cat-btn" onclick="setHistCat('cbth_atleta')"     >At. Atleta</button>
+          <button id="hist-cat-cbth_palestra" class="hist-cat-btn" onclick="setHistCat('cbth_palestra')"   >Palestras</button>
+          <button id="hist-cat-cbth_start"    class="hist-cat-btn" onclick="setHistCat('cbth_start')"      >Start</button>
+          <button id="hist-cat-banco_jog"     class="hist-cat-btn" onclick="setHistCat('banco_jog')"       >Banco Jog.</button>
+        </div>
+        <div style="margin-left:auto">
+          <button onclick="saveHistorico()" id="hist-save-btn" style="background:#16A34A;color:#fff;border:none;border-radius:7px;padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+            💾 Salvar
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Legend bar (only in matrix view) -->
+    <div id="hist-legend-bar" style="display:none;padding:6px 24px;background:var(--surface2);border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;flex-shrink:0"></div>
+
+    <!-- Month selector content -->
+    <div id="hist-content-months" style="flex:1;overflow-y:auto;padding:28px 32px">
+      <div id="hist-month-cards" style="display:flex;flex-direction:column;gap:10px;max-width:600px"></div>
+      <div id="hist-empty-msg" style="display:none;text-align:center;padding:60px 20px;color:var(--txt3)">
+        <div style="font-size:32px;margin-bottom:12px">📅</div>
+        <div style="font-size:14px;font-weight:600;color:var(--txt2);margin-bottom:6px">Nenhum mês registrado ainda</div>
+        <div style="font-size:12px">Selecione um mês no seletor acima e clique <b>+ Mês</b><br>ou use <b>⚡ Snapshot atual</b> para capturar todos os dados de hoje.</div>
+      </div>
+    </div>
+
+    <!-- Matrix content -->
+    <div id="hist-content-matrix" style="display:none;flex:1;overflow:auto">
+      <table id="hist-matrix" style="border-collapse:collapse;min-width:100%">
+        <thead id="hist-thead"></thead>
+        <tbody id="hist-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════
+const ESTADOS = [
+  {uf:'AC',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'AL',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'AM',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'AP',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'BA',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'CE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'DF',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'ES',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'GO',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'MA',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'MG',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'MS',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'MT',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'PA',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'PB',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'PE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'PI',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'PR',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'RJ',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'RN',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'RO',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'RR',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'RS',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'SC',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'SE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'SP',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'TO',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+];
+
+// ══════════════════════════════════════════════════
+// CLOUD SYNC — jsonbin.io
+// ══════════════════════════════════════════════════
+const BIN_ID  = '69c581fcaa77b81da92236a4';
+const BIN_KEY = '$2a$10$AndF8hGWBRTBY3xVHiZWgeu9cm.7xyguXCu3ofiSRF63Vj1L/kB2C';
+const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+let HISTORICO = [];
+let syncTimer = null;
+let syncStatus = 'idle';
+
+function showSyncStatus(s) {
+  syncStatus = s;
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const map = {
+    idle:   '',
+    saving: '⟳ Salvando…',
+    saved:  '✓ Salvo na nuvem',
+    local:  '💾 Salvo localmente',
+    error:  '✗ Erro ao salvar'
+  };
+  const col = {idle:'',saving:'#F59E0B',saved:'#16A34A',local:'#6B7280',error:'#EF4444'};
+  el.textContent = map[s]; el.style.color = col[s];
+}
+
+// Always persist to localStorage immediately (zero-latency backup)
+function saveLocal() {
+  try { localStorage.setItem('cbth_v4',   JSON.stringify(ESTADOS));   } catch(_){}
+  try { localStorage.setItem('cbth_hist', JSON.stringify(HISTORICO)); } catch(_){}
+}
+
+function loadLocal() {
+  try { const s=localStorage.getItem('cbth_v4');   if(s) JSON.parse(s).forEach((d,i)=>{if(ESTADOS[i])Object.assign(ESTADOS[i],d);}); } catch(_){}
+  try { const h=localStorage.getItem('cbth_hist'); if(h) HISTORICO=JSON.parse(h); } catch(_){}
+}
+
+async function loadData() {
+  showSyncStatus('saving');
+  try {
+    const r = await fetch(BIN_URL + '/latest', {
+      method: 'GET',
+      headers: {
+        'X-Master-Key': BIN_KEY,
+        'X-Bin-Meta':   'false',
+      }
+    });
+    if (!r.ok) throw new Error(`${r.status}`);
+    const j = await r.json();
+    const d = j.record || j || {};
+    if (Array.isArray(d.estados))   d.estados.forEach((row,i)=>{if(ESTADOS[i])Object.assign(ESTADOS[i],row);});
+    if (Array.isArray(d.historico)) HISTORICO = d.historico;
+    saveLocal(); // keep local in sync
+    showSyncStatus('saved');
+  } catch(e) {
+    console.warn('JSONBin load failed — using localStorage:', e.message);
+    loadLocal();
+    showSyncStatus('local');
+  }
+}
+
+async function _cloudPush() {
+  const r = await fetch(BIN_URL, {
+    method:  'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': BIN_KEY,
+    },
+    body: JSON.stringify({ estados: ESTADOS, historico: HISTORICO })
+  });
+  if (!r.ok) {
+    const txt = await r.text().catch(()=>'');
+    throw new Error(`${r.status} ${txt}`);
+  }
+}
+
+async function saveData() {
+  saveLocal();
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    showSyncStatus('saving');
+    try   { await _cloudPush(); showSyncStatus('saved'); }
+    catch (e) { console.warn('Cloud save failed:', e.message); showSyncStatus('local'); }
+  }, 800);
+}
+
+async function saveHistorico() {
+  saveLocal();
+  clearTimeout(syncTimer);
+  showSyncStatus('saving');
+  try   { await _cloudPush(); showSyncStatus('saved'); }
+  catch (e) { console.warn('Cloud save failed:', e.message); showSyncStatus('local'); }
+}
+
+
+// ══════════════════════════════════════════════════
+// CNPJ CONFIG
+// ══════════════════════════════════════════════════
+const CNPJ_CFG = {
+  '':             {label:'Sem info',          color:'#E5E7EB', bg:'#F9FAFB'},
+  seminfo:        {label:'Sem info',          color:'#E5E7EB', bg:'#F9FAFB'},
+  inativo:        {label:'CNPJ Inativo',      color:'#BFDBFE', bg:'#EFF6FF'},
+  regularizando:  {label:'CNPJ Regularizando',color:'#60A5FA', bg:'#DBEAFE'},
+  ativo:          {label:'CNPJ Ativo',        color:'#1D4ED8', bg:'#DBEAFE'},
+};
+
+// ══════════════════════════════════════════════════
+// VIZ LAYERS
+// ══════════════════════════════════════════════════
+const VIZ = {
+  destaque:{
+    label:'Federação Destaque',
+    getScore(e){
+      let s = 0;
+      // Gestão & Esportividade — 1pt cada
+      if(e.cnpj==='ativo')      s+=1;
+      if(e.resp_com)             s+=1;
+      // CBTH pelo Brasil — 1pt cada (4 critérios)
+      if(e.cbth_ev_logo==='sim') { s+=1; if(e.cbth_ev_count && parseInt(e.cbth_ev_count)>1) s+= Math.min(parseInt(e.cbth_ev_count)-1, 2); } // bonus up to 2 extra for multiple events
+      if(e.cbth_atleta==='sim')  s+=1;
+      if(e.cbth_palestra==='sim')s+=1;
+      if(e.cbth_start==='sim')   s+=1;
+      // Presença Digital — 1pt cada
+      if(e.ig_status==='ativo' || e.ig_status==='inconstante') s+=1;
+      if(e.div==='media' || e.div==='alta')  s+=1;
+      if(e.marca==='ativa')      s+=1;
+      // Diversidade & Inclusão — 1pt
+      if(e.inclusao==='acoes')   s+=1;
+      // Banco de Jogadores — 1pt
+      if(e.banco_jog==='sim')    s+=1;
+      return s; // max = 11
+    },
+    getColor(e){
+      const s = this.getScore(e);
+      // ≥ 60% = 6.6 pts → arredondamos para s >= 7 como limiar verde
+      if(s >= 7)  return '#6B7280'; // avançando — cinza escuro
+      if(s > 0)   return '#CBD5E0'; // iniciando — cinza médio
+      return '#F1F4F8';              // sem dados — cinza clarinho
+    },
+    legend:[
+      {color:'linear-gradient(135deg,#F5C842,#C8960C)', label:'🥇 País Ouro (top 1)', isGold:true},
+      {color:'linear-gradient(135deg,#E8E8E8,#A8A8A8)', label:'🥈 País Prata (top 2)', isSilver:true},
+      {color:'linear-gradient(135deg,#CD7F32,#8B4513)', label:'🥉 País Bronze (top 3)', isBronze:true},
+      {color:'#6B7280', label:'Avançando (≥ 60%)'},
+      {color:'#CBD5E0', label:'Iniciando'},
+      {color:'#F1F4F8', label:'Sem dados'},
+    ],
+    tooltip(e){
+      const s = VIZ.destaque.getScore(e);
+      const pct = Math.round(s/11*100);
+      // Medal based on ranking, not score threshold — tooltip just shows score
+      return[
+        {key:'Score',       val:`${s}/11 pontos (${pct}%)`, ok:pct>=60},
+        {key:'CNPJ',        val:e.cnpj==='ativo'?'Ativo':e.cnpj||'—',          ok:e.cnpj==='ativo'},
+        {key:'Resp. Com.',  val:e.resp_com?'✓ Designado':'—',                   ok:!!e.resp_com},
+        {key:'CBTH ações',  val:[e.cbth_ev_logo,e.cbth_atleta,e.cbth_palestra,e.cbth_start].filter(v=>v==='sim').length+'/4', ok:true},
+        {key:'Presença IG', val:e.ig_status||'—',                               ok:e.ig_status==='ativo'},
+        {key:'Diversidade', val:e.inclusao==='acoes'?'Sim':'—',                 ok:e.inclusao==='acoes'},
+        {key:'Banco Jog.',  val:e.banco_jog==='sim'?'✓ Sim':'—',               ok:e.banco_jog==='sim'},
+      ];
+    },
+  },
+  gestao:{
+    label:'Gestão & Esportividade',
+    getColor(e){return CNPJ_CFG[e.cnpj||''].color},
+    legend:[
+      {color:'#1D4ED8',label:'CNPJ Ativo'},
+      {color:'#60A5FA',label:'CNPJ Regularizando'},
+      {color:'#BFDBFE',label:'CNPJ Inativo'},
+      {color:'#E5E7EB',label:'Sem info CNPJ'},
+      {emoji:true,label:'📢 Resp. Comunicação'},
+    ],
+    tooltip(e){return[
+      {key:'Responsável', val:e.resp||'—',     ok:!!e.resp},
+      {key:'Resp. Com.',  val:e.resp_com||'—', ok:!!e.resp_com},
+      {key:'CNPJ',        val:CNPJ_CFG[e.cnpj||''].label, ok:e.cnpj==='ativo'},
+    ]},
+  },
+  digital:{
+    label:'Presença Digital',
+    getColor(e){
+      if(e.ig_status==='ativo')       return '#16A34A';
+      if(e.ig_status==='inconstante') return '#F59E0B';
+      if(e.ig_status==='inativo')     return '#EF4444';
+      if(e.ig)                        return '#BBF7D0';
+      return '#E2E8F0';
+    },
+    legend:[
+      {color:'#16A34A',label:'IG Ativo'},
+      {color:'#F59E0B',label:'IG Inconstante'},
+      {color:'#EF4444',label:'IG Inativo'},
+      {color:'#BBF7D0',label:'IG cadastrado (não analisado)'},
+      {color:'#E2E8F0',label:'Sem Instagram'},
+    ],
+    tooltip(e){return[
+      {key:'Instagram',   val:e.ig||'—',                                                             ok:!!e.ig},
+      {key:'Status IG',   val:e.ig_status||'não analisado',                                          ok:e.ig_status==='ativo'},
+      {key:'Divulgação',  val:e.div||'—',                                                             ok:['media','alta'].includes(e.div)},
+      {key:'Marca CBTH',  val:e.marca||'—',                                                           ok:e.marca==='ativa'},
+    ]},
+  },
+  diversidade:{
+    label:'Diversidade & Inclusão',
+    getColor(e){
+      if(e.inclusao==='acoes')     return '#EAB308'; // amarelo médio
+      if(e.inclusao==='sem_acoes') return '#FEF9C3'; // amarelo muito claro
+      return '#E5E7EB';                               // não avaliado
+    },
+    legend:[
+      {color:'#EAB308', label:'Ações Inclusivas'},
+      {color:'#FEF9C3', label:'Sem ações registradas'},
+      {color:'#E5E7EB', label:'Não avaliado'},
+    ],
+    tooltip(e){return[
+      {key:'Inclusão', val:e.inclusao==='acoes'?'Ações Inclusivas':e.inclusao==='sem_acoes'?'Sem ações':'Não avaliado', ok:e.inclusao==='acoes'},
+    ]},
+  },
+  cbth:{
+    label:'CBTH pelo Brasil',
+    getColor(e){
+      const score = [e.cbth_ev_logo==='sim',e.cbth_atleta==='sim',e.cbth_palestra==='sim',e.cbth_start==='sim'].filter(Boolean).length;
+      if(score===4) return '#15803D'; // all 4
+      if(score===3) return '#16A34A';
+      if(score===2) return '#4ADE80';
+      if(score===1) return '#BBF7D0';
+      return '#E2E8F0';
+    },
+    legend:[
+      {color:'#15803D',label:'Todas as 4 ações'},
+      {color:'#16A34A',label:'3 de 4 ações'},
+      {color:'#4ADE80',label:'2 de 4 ações'},
+      {color:'#BBF7D0',label:'1 de 4 ações'},
+      {color:'#E2E8F0',label:'Nenhuma ação registrada'},
+    ],
+    tooltip(e){return[
+      {key:'Evento logo', val:e.cbth_ev_logo==='sim'?'✓ Sim':'Não registrado', ok:e.cbth_ev_logo==='sim'},
+      {key:'At. atleta',  val:e.cbth_atleta==='sim'?'✓ Sim':'Não registrado',  ok:e.cbth_atleta==='sim'},
+      {key:'Palestras',   val:e.cbth_palestra==='sim'?'✓ Sim':'Não registrado',ok:e.cbth_palestra==='sim'},
+      {key:'Start',       val:e.cbth_start==='sim'?'✓ Sim':'Não registrado',   ok:e.cbth_start==='sim'},
+    ]},
+  },
+  banco:{
+    label:'Banco de Dados',
+    getColor(e){
+      if(e.banco_jog==='sim') return '#78350F'; // marrom escuro
+      return '#E5E7EB';                          // sem dados
+    },
+    legend:[
+      {color:'#78350F',label:'Alimentando o banco de jogadores'},
+      {color:'#E5E7EB',label:'Não alimentando'},
+    ],
+    tooltip(e){
+      const n=[e.nome,e.resp,e.resp_com,e.email,e.wpp,e.ig,e.web].filter(Boolean).length;
+      return[
+        {key:'Nome',        val:e.nome||'—',   ok:!!e.nome},
+        {key:'Responsável', val:e.resp||'—',   ok:!!e.resp},
+        {key:'Completude',  val:`${n}/7 campos`,ok:n>=5},
+      ];
+    },
+  },
+};
+
+let activeViz = 'destaque';
+
+// ══════════════════════════════════════════════════
+// MAP
+// ══════════════════════════════════════════════════
+// Centroids in SVG viewBox 0 0 1000 1100 space
+const CENTROIDS = {
+  AC:{x:130,y:320}, AL:{x:820,y:280}, AM:{x:210,y:185}, AP:{x:416,y:64},
+  BA:{x:720,y:370}, CE:{x:740,y:210}, DF:{x:550,y:373}, ES:{x:686,y:456},
+  GO:{x:536,y:358}, MA:{x:618,y:216}, MG:{x:600,y:460}, MS:{x:376,y:418},
+  MT:{x:390,y:340}, PA:{x:490,y:148}, PB:{x:796,y:254}, PE:{x:768,y:264},
+  PI:{x:672,y:218}, PR:{x:376,y:510}, RJ:{x:650,y:526}, RN:{x:792,y:208},
+  RO:{x:238,y:328}, RR:{x:278,y:86},  RS:{x:342,y:586}, SC:{x:364,y:556},
+  SE:{x:826,y:314}, SP:{x:456,y:456}, TO:{x:532,y:302},
+};
+
+const tooltip = document.getElementById('map-tooltip');
+
+function positionOverlay() {
+  const canvas = document.getElementById('map-canvas');
+  const W = canvas.clientWidth;
+  const H = canvas.clientHeight;
+
+  // SVG viewBox for Brazil states
+  const svgW = 868, svgH = 646;
+
+  // Scale to fit canvas with padding, limited by both dimensions
+  const padding = 0.88;
+  const scale = Math.min(W / svgW, H / svgH) * padding;
+  const finalW = svgW * scale;
+  const finalH = svgH * scale;
+
+  // Center in canvas
+  const offsetX = (W - finalW) / 2;
+  const offsetY = (H - finalH) / 2;
+
+  const overlay = document.getElementById('brazil-overlay');
+  overlay.style.left   = offsetX + 'px';
+  overlay.style.top    = offsetY + 'px';
+  overlay.style.width  = finalW + 'px';
+  overlay.style.height = finalH + 'px';
+
+  const svg = document.getElementById('brazil-svg');
+  svg.setAttribute('viewBox', '0 0 868 646');
+  svg.style.width  = finalW + 'px';
+  svg.style.height = finalH + 'px';
+
+  const emojiLayer = document.getElementById('emoji-layer');
+  emojiLayer.style.left   = offsetX + 'px';
+  emojiLayer.style.top    = offsetY + 'px';
+  emojiLayer.style.width  = finalW + 'px';
+  emojiLayer.style.height = finalH + 'px';
+}
+
+function renderMap() {
+  positionOverlay();
+  const viz = VIZ[activeViz];
+  document.getElementById('viz-active-label').textContent = viz.label;
+
+  document.querySelectorAll('.st').forEach(path => {
+    const uf = path.dataset.uf;
+    const e = ESTADOS.find(x => x.uf === uf);
+    path.style.fill = e ? viz.getColor(e) : '#D1D9E6';
+
+    path.onmouseenter = ev => {
+      path.style.filter = 'brightness(.82) saturate(1.2)';
+      document.getElementById('tt-uf').textContent = uf;
+      document.getElementById('tt-nome').textContent = e ? (e.nome || 'Não cadastrado') : uf;
+      const rows = e ? viz.tooltip(e) : [];
+      document.getElementById('tt-details').innerHTML = rows.map(r =>
+        `<div class="tt-row">
+          <span class="tt-icon" style="color:${r.ok?'#16A34A':'#9AA3B2'}">${r.ok?'✓':'○'}</span>
+          <span class="tt-key">${r.key}:</span>
+          <span class="tt-val" style="color:${r.ok?'#0D1117':'#9AA3B2'}">${r.val}</span>
+        </div>`
+      ).join('');
+      tooltip.style.opacity = '1';
+    };
+    path.onmousemove = ev => {
+      tooltip.style.left = (ev.clientX + 14) + 'px';
+      tooltip.style.top  = (ev.clientY - 10) + 'px';
+    };
+    path.onmouseleave = () => {
+      path.style.filter = '';
+      tooltip.style.opacity = '0';
+    };
+  });
+
+  // Emoji layer — context-aware per viz
+  const overlay = document.getElementById('brazil-overlay');
+  const svgEl   = document.getElementById('brazil-svg');
+  const vbW = 868, vbH = 646;
+  const rendW = parseFloat(svgEl.style.width)  || overlay.clientWidth;
+  const rendH = parseFloat(svgEl.style.height) || overlay.clientHeight;
+  const scX = rendW / vbW;
+  const scY = rendH / vbH;
+
+  const emojiLayer = document.getElementById('emoji-layer');
+  emojiLayer.innerHTML = '';
+
+  if (activeViz === 'gestao') {
+    // 📢 Responsável de comunicação
+    ESTADOS.filter(e => e.resp_com && CENTROIDS[e.uf]).forEach(e => {
+      const ct = CENTROIDS[e.uf];
+      const span = document.createElement('span');
+      span.style.cssText = `position:absolute;left:${ct.x*scX-9}px;top:${ct.y*scY-9}px;font-size:14px;line-height:1;pointer-events:none`;
+      span.textContent = '📢';
+      emojiLayer.appendChild(span);
+    });
+  } else if (activeViz === 'destaque') {
+    // Medal emojis ranked by score — top 3 get metallic state fills
+    const ranked = [...ESTADOS]
+      .filter(e => e.nome && CENTROIDS[e.uf])
+      .map(e => ({...e, score: VIZ.destaque.getScore(e)}))
+      .sort((a,b) => b.score - a.score);
+
+    const medalColors = [
+      { emoji:'🥇', fill:'url(#grad-ouro)',   solidFill:'#854D0E', hex:'#C8960C' },
+      { emoji:'🥈', fill:'url(#grad-prata)',  solidFill:'#166534', hex:'#A0A0A0' },
+      { emoji:'🥉', fill:'url(#grad-bronze)', solidFill:'#166534', hex:'#A0522D' },
+    ];
+
+    // Inject SVG defs for metallic gradients
+    const svgDefsId = 'medal-defs';
+    let defsEl = document.getElementById(svgDefsId);
+    if (!defsEl) {
+      defsEl = document.createElementNS('http://www.w3.org/2000/svg','defs');
+      defsEl.id = svgDefsId;
+      defsEl.innerHTML = `
+        <linearGradient id="grad-ouro" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#F5C842"/>
+          <stop offset="40%"  stop-color="#E8A800"/>
+          <stop offset="70%"  stop-color="#C8960C"/>
+          <stop offset="100%" stop-color="#8B6914"/>
+        </linearGradient>
+        <linearGradient id="grad-prata" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#F0F0F0"/>
+          <stop offset="35%"  stop-color="#C8C8C8"/>
+          <stop offset="65%"  stop-color="#A0A0A0"/>
+          <stop offset="100%" stop-color="#707070"/>
+        </linearGradient>
+        <linearGradient id="grad-bronze" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#CD7F32"/>
+          <stop offset="40%"  stop-color="#B5652A"/>
+          <stop offset="70%"  stop-color="#9A4E20"/>
+          <stop offset="100%" stop-color="#6B3318"/>
+        </linearGradient>
+      `;
+      document.getElementById('brazil-svg').prepend(defsEl);
+    }
+
+    ranked.slice(0,3).forEach((e,i) => {
+      const med = medalColors[i];
+      // Color the state path with metallic gradient
+      const path = document.querySelector(`.st[data-uf="${e.uf}"]`);
+      if (path) {
+        path.style.fill = med.fill;
+        path.style.stroke = '#1a1a1a';
+      }
+      // Place emoji
+      const ct = CENTROIDS[e.uf];
+      const span = document.createElement('span');
+      span.style.cssText = `position:absolute;left:${ct.x*scX-12}px;top:${ct.y*scY-12}px;font-size:20px;line-height:1;pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))`;
+      span.textContent = med.emoji;
+      emojiLayer.appendChild(span);
+    });
+  }
+
+  // Legend — digital mode uses sub-specific legend
+  const legendItems = (['digital','diversidade'].includes(activeViz) && viz.getLegend) ? viz.getLegend() : viz.legend;
+  document.getElementById('map-legend').innerHTML = legendItems.map(l =>
+    l.emoji
+      ? `<div class="legend-item"><span style="font-size:13px">${l.label.split(' ')[0]}</span><span>${l.label.split(' ').slice(1).join(' ')}</span></div>`
+      : (l.isGold || l.isSilver || l.isBronze)
+        ? `<div class="legend-item"><div class="legend-dot" style="background:${l.color};border:1px solid rgba(0,0,0,0.15)"></div><span>${l.label}</span></div>`
+        : `<div class="legend-item"><div class="legend-dot" style="background:${l.color};border:1px solid rgba(0,0,0,0.08)"></div><span>${l.label}</span></div>`
+  ).join('');
+
+  renderStatsOverlay(activeViz, legendItems);
+}
+
+function renderStatsOverlay(viz, legendItems) {
+  const el = document.getElementById('map-stats-overlay');
+  const total = 27;
+
+  // Build count per color using the current viz getColor
+  const colorCounts = {};
+  ESTADOS.forEach(e => {
+    const c = VIZ[viz].getColor(e);
+    colorCounts[c] = (colorCounts[c] || 0) + 1;
+  });
+
+  // Filter out: no-data gray, medal gradients, emoji-only items
+  const items = legendItems.filter(l =>
+    !l.emoji && !l.isGold && !l.isSilver && !l.isBronze &&
+    l.color && !l.color.startsWith('linear') &&
+    l.color !== '#E5E7EB' && l.color !== '#E2E8F0' && l.color !== '#F3F4F6' && l.color !== '#D1D9E6'
+  );
+
+  if (!items.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = items.map(l => {
+    const count = colorCounts[l.color] || 0;
+    const pct = Math.round(count / total * 100);
+    const textColor = ['#FEF9C3','#BFDBFE','#F3E8FF','#FEF08A','#FEF3C7'].includes(l.color) ? 'var(--txt3)' : l.color;
+    return `<div class="mso-item">
+      <div class="mso-dot" style="background:${l.color};border:1px solid rgba(0,0,0,0.1)"></div>
+      <span class="mso-label">${l.label.replace(/\s*\(.*\)/, '')}</span>
+      <span class="mso-pct" style="color:${textColor}">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════
+// SIDEBAR PANELS
+// ══════════════════════════════════════════════════
+function showSidebarFor(viz) {
+  document.getElementById('sidebar-destaque').style.display    = viz==='destaque'    ? '' : 'none';
+  document.getElementById('sidebar-gestao').style.display      = viz==='gestao'      ? '' : 'none';
+  document.getElementById('sidebar-cbth').style.display        = viz==='cbth'        ? '' : 'none';
+  document.getElementById('sidebar-digital').style.display     = viz==='digital'     ? '' : 'none';
+  document.getElementById('sidebar-diversidade').style.display = viz==='diversidade' ? '' : 'none';
+  document.getElementById('sidebar-banco').style.display       = viz==='banco'       ? '' : 'none';
+  if (viz==='destaque')    renderDestaqueRanking();
+  if (viz==='digital')     renderDigitalBreakdown();
+  if (viz==='gestao')      renderCnpjAccordion();
+  if (viz==='diversidade') renderDiversidadeBreakdown();
+  if (viz==='cbth')        renderCbthBreakdown();
+  if (viz==='banco')       renderBancoJogSummary();
+}
+
+function renderCnpjAccordion() {
+  const total = 27;
+  const ativo         = ESTADOS.filter(e=>e.cnpj==='ativo').length;
+  const inativo       = ESTADOS.filter(e=>e.cnpj==='inativo').length;
+  const regularizando = ESTADOS.filter(e=>e.cnpj==='regularizando').length;
+  const seminfo       = total - ativo - inativo - regularizando;
+  const comRespCom    = ESTADOS.filter(e=>e.resp_com).length;
+
+  const rows = [
+    {key:'seminfo',       label:'Sem info',          color:'#E5E7EB', count:seminfo,       list:ESTADOS.filter(e=>!e.cnpj||e.cnpj==='seminfo')},
+    {key:'inativo',       label:'CNPJ Inativo',      color:'#BFDBFE', count:inativo,       list:ESTADOS.filter(e=>e.cnpj==='inativo')},
+    {key:'regularizando', label:'CNPJ Regularizando',color:'#60A5FA', count:regularizando, list:ESTADOS.filter(e=>e.cnpj==='regularizando')},
+    {key:'ativo',         label:'CNPJ Ativo',        color:'#1D4ED8', count:ativo,         list:ESTADOS.filter(e=>e.cnpj==='ativo')},
+  ];
+
+  const comRespList  = ESTADOS.filter(e=>e.resp_com);
+  const semRespList  = ESTADOS.filter(e=>!e.resp_com);
+
+  const container = document.getElementById('cnpj-status-list');
+  container.innerHTML = `
+    <div class="cnpj-accordion" style="margin-bottom:8px" id="resp-com-accordion">
+      <div class="cnpj-acc-header">
+        <div class="cnpj-acc-left">
+          <span style="font-size:14px;line-height:1;margin-right:2px">📢</span>
+          <div>
+            <div class="cnpj-name">Resp. Comunicação</div>
+            <div class="cnpj-bar-wrap"><div class="cnpj-bar-inner" style="background:var(--txt3);width:${Math.round(comRespCom/total*100)}%"></div></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="cnpj-count" style="color:var(--txt3)">${comRespCom}</span>
+          <svg class="cnpj-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="transition:transform .2s;color:var(--txt3)"><path d="M2 4.5L6 8L10 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="cnpj-dropdown">
+        <div style="padding:5px 10px 3px;border-bottom:1px solid var(--border)">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3)">Com responsável (${comRespList.length})</span>
+        </div>
+        ${comRespList.length===0
+          ? '<div class="cnpj-dd-row" style="color:var(--txt3)">Nenhum estado</div>'
+          : comRespList.map(e=>`<div class="cnpj-dd-row">
+              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+              <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+              <span style="font-size:11px;color:var(--txt3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px">${e.resp_com}</span>
+            </div>`).join('')}
+        <div style="padding:5px 10px 3px;border-bottom:1px solid var(--border);border-top:1px solid var(--border)">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3)">Sem responsável (${semRespList.length})</span>
+        </div>
+        ${semRespList.map(e=>`<div class="cnpj-dd-row">
+              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+              <span style="color:var(--txt3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+            </div>`).join('')}
+      </div>
+    </div>
+  ` + rows.map(r => `
+    <div class="cnpj-accordion" data-key="${r.key}">
+      <div class="cnpj-acc-header">
+        <div class="cnpj-acc-left">
+          <div class="cnpj-dot" style="background:${r.color}"></div>
+          <div>
+            <div class="cnpj-name">${r.label}</div>
+            <div class="cnpj-bar-wrap"><div class="cnpj-bar-inner" style="background:${r.color};width:${Math.round(r.count/total*100)}%"></div></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="cnpj-count" style="color:${r.color}">${r.count}</span>
+          <svg class="cnpj-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8L10 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="cnpj-dropdown">
+        ${r.list.length===0
+          ? '<div class="cnpj-dd-row" style="color:var(--txt3)">Nenhum estado neste status</div>'
+          : r.list.map(e=>`<div class="cnpj-dd-row">
+              <span style="font-family:\'DM Mono\',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+              <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+              ${e.resp_com?'<span title="'+e.resp_com+'">📢</span>':''}
+            </div>`).join('')
+        }
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.cnpj-accordion').forEach(acc => {
+    acc.querySelector('.cnpj-acc-header').addEventListener('click', () => {
+      const dd = acc.querySelector('.cnpj-dropdown');
+      const ch = acc.querySelector('.cnpj-chevron');
+      const open = dd.style.display === 'block';
+      container.querySelectorAll('.cnpj-dropdown').forEach(d => d.style.display='none');
+      container.querySelectorAll('.cnpj-chevron').forEach(c => c.style.transform='');
+      container.querySelectorAll('.cnpj-accordion').forEach(a => a.style.background='');
+      if (!open) {
+        dd.style.display = 'block';
+        ch.style.transform = 'rotate(180deg)';
+        acc.style.background = '#F8FAFF';
+      }
+    });
+  });
+}
+
+let activeDigSub = 'ig_status'; // 'ig_status' | 'div' | 'marca'
+
+function setDigSub(btn, sub) {
+  document.querySelectorAll('.dig-sub-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeDigSub = sub;
+  renderDigitalBreakdown();
+  renderMap(); // update map colors for active sub
+}
+
+// Digital VIZ getColor respects activeDigSub
+VIZ.digital.getColor = function(e) {
+  if (activeDigSub === 'ig_status') {
+    if(e.ig_status==='ativo')       return '#6B21A8'; // roxo escuro
+    if(e.ig_status==='inconstante') return '#A855F7'; // roxo médio
+    if(e.ig_status==='inativo')     return '#D8B4FE'; // roxo claro
+    if(e.ig)                        return '#F3E8FF'; // roxo muito claro
+    return '#E5E7EB';                                  // sem dados
+  }
+  if (activeDigSub === 'div') {
+    if(e.div==='alta')   return '#6B21A8';
+    if(e.div==='media')  return '#A855F7';
+    if(e.div==='baixa')  return '#D8B4FE';
+    if(e.div==='sem')    return '#F3E8FF';
+    return '#E5E7EB';
+  }
+  if (activeDigSub === 'marca') {
+    if(e.marca==='ativa')   return '#6B21A8';
+    if(e.marca==='inativa') return '#D8B4FE';
+    return '#E5E7EB';
+  }
+  return '#E5E7EB';
+};
+
+// Update legend when sub changes
+VIZ.digital.getLegend = function() {
+  if (activeDigSub === 'ig_status') return [
+    {color:'#6B21A8',label:'IG Ativo'},
+    {color:'#A855F7',label:'IG Inconstante'},
+    {color:'#D8B4FE',label:'IG Inativo'},
+    {color:'#F3E8FF',label:'IG cadastrado (não analisado)'},
+    {color:'#E5E7EB',label:'Sem Instagram'},
+  ];
+  if (activeDigSub === 'div') return [
+    {color:'#6B21A8',label:'Divulgação Alta'},
+    {color:'#A855F7',label:'Divulgação Média'},
+    {color:'#D8B4FE',label:'Divulgação Baixa'},
+    {color:'#F3E8FF',label:'Sem divulgação'},
+    {color:'#E5E7EB',label:'Não avaliado'},
+  ];
+  if (activeDigSub === 'marca') return [
+    {color:'#6B21A8',label:'Marca CBTH Ativa'},
+    {color:'#D8B4FE',label:'Marca CBTH Inativa'},
+    {color:'#E5E7EB',label:'Não avaliado'},
+  ];
+  return [];
+};
+
+function renderDigitalBreakdown() {
+  const total = 27;
+
+  // Accordion rows per sub
+  const DIG_ROWS = {
+    ig_status: [
+      {val:'ativo',       label:'IG Ativo',        color:'#6B21A8', list:ESTADOS.filter(e=>e.ig_status==='ativo')},
+      {val:'inconstante', label:'IG Inconstante',   color:'#A855F7', list:ESTADOS.filter(e=>e.ig_status==='inconstante')},
+      {val:'inativo',     label:'IG Inativo',       color:'#D8B4FE', list:ESTADOS.filter(e=>e.ig_status==='inativo')},
+      {val:'sem_ig',      label:'Sem Instagram',    color:'#E5E7EB', list:ESTADOS.filter(e=>!e.ig)},
+    ],
+    div: [
+      {val:'alta',  label:'Divulgação Alta',  color:'#6B21A8', list:ESTADOS.filter(e=>e.div==='alta')},
+      {val:'media', label:'Divulgação Média', color:'#A855F7', list:ESTADOS.filter(e=>e.div==='media')},
+      {val:'baixa', label:'Divulgação Baixa', color:'#D8B4FE', list:ESTADOS.filter(e=>e.div==='baixa')},
+      {val:'sem',   label:'Sem divulgação',   color:'#F3E8FF', list:ESTADOS.filter(e=>e.div==='sem')},
+      {val:'',      label:'Não avaliado',     color:'#E5E7EB', list:ESTADOS.filter(e=>!e.div)},
+    ],
+    marca: [
+      {val:'ativa',   label:'Marca CBTH Ativa',   color:'#6B21A8', list:ESTADOS.filter(e=>e.marca==='ativa')},
+      {val:'inativa', label:'Marca CBTH Inativa',  color:'#D8B4FE', list:ESTADOS.filter(e=>e.marca==='inativa')},
+      {val:'',        label:'Não avaliado',         color:'#E5E7EB', list:ESTADOS.filter(e=>!e.marca)},
+    ],
+  };
+
+  const rows = DIG_ROWS[activeDigSub] || [];
+  const el = document.getElementById('digital-breakdown');
+
+  el.innerHTML = rows.map(r => `
+    <div class="cnpj-accordion" style="margin-bottom:5px">
+      <div class="cnpj-acc-header" onclick="this.parentElement.querySelector('.cnpj-dropdown').style.display=this.parentElement.querySelector('.cnpj-dropdown').style.display==='block'?'none':'block';this.parentElement.querySelector('.cnpj-chevron').style.transform=this.parentElement.querySelector('.cnpj-dropdown').style.display==='block'?'rotate(180deg)':''">
+        <div class="cnpj-acc-left">
+          <div class="cnpj-dot" style="background:${r.color}"></div>
+          <div>
+            <div class="cnpj-name">${r.label}</div>
+            <div class="cnpj-bar-wrap"><div class="cnpj-bar-inner" style="background:${r.color};width:${Math.round(r.list.length/total*100)}%"></div></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="cnpj-count" style="color:${r.color}">${r.list.length}</span>
+          <svg class="cnpj-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="transition:transform .2s;color:var(--txt3)"><path d="M2 4.5L6 8L10 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="cnpj-dropdown">
+        ${r.list.length===0
+          ? '<div class="cnpj-dd-row" style="color:var(--txt3)">Nenhum estado neste status</div>'
+          : r.list.map(e=>`<div class="cnpj-dd-row">
+              <span style="font-family:\'DM Mono\',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+              <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+            </div>`).join('')
+        }
+      </div>
+    </div>
+  `).join('');
+
+  // AI estado select
+  const sel = document.getElementById('ai-estado-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Selecionar estado...</option>' +
+    ESTADOS.filter(e=>e.ig).map(e=>`<option value="${e.uf}" ${e.uf===cur?'selected':''}>${e.uf} — ${e.nome||'Sem nome'}</option>`).join('');
+}
+
+// ══════════════════════════════════════════════════
+// AI ANALYSIS
+// ══════════════════════════════════════════════════
+async function runDigitalAnalysis() {
+  const sel = document.getElementById('ai-estado-select');
+  const uf = sel.value;
+  if (!uf) { alert('Selecione um estado com Instagram cadastrado.'); return; }
+  const estado = ESTADOS.find(e=>e.uf===uf);
+  if (!estado?.ig) { alert('Este estado não tem Instagram cadastrado.'); return; }
+
+  const btn = document.getElementById('ai-btn');
+  const result = document.getElementById('ai-result');
+  btn.disabled = true; btn.textContent = '⟳ Analisando...';
+  result.style.display = 'block';
+  result.innerHTML = '<span style="color:var(--txt3)">Consultando IA...</span>';
+
+  const prompt = `Você é analista de presença digital esportiva. Analise a federação de handball do estado ${uf} (${estado.nome||'sem nome'}).
+Instagram: ${estado.ig}
+Website: ${estado.web||'não informado'}
+
+Retorne SOMENTE um JSON válido sem markdown:
+{"ig_status":"ativo"|"inconstante"|"inativo","ig_just":"breve razão","div":"sem"|"baixa"|"media"|"alta","div_just":"breve razão","marca":"ativa"|"inativa","marca_just":"breve razão","resumo":"2 frases de análise geral"}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b=>b.type==='text')?.text||'';
+    const p = JSON.parse(text.replace(/```json|```/g,'').trim());
+
+    const idx = ESTADOS.indexOf(estado);
+    ESTADOS[idx].ig_status = p.ig_status||'';
+    ESTADOS[idx].div       = p.div||'';
+    ESTADOS[idx].marca     = p.marca||'';
+    saveData(); renderMap(); renderDigitalBreakdown();
+
+    const igColor = p.ig_status==='ativo'?'#16A34A':p.ig_status==='inconstante'?'#F59E0B':'#EF4444';
+    result.innerHTML = `
+      <div style="font-weight:600;color:var(--txt);margin-bottom:6px">${uf} · Análise IA</div>
+      <div style="margin-bottom:3px"><span style="color:var(--txt3)">IG:</span> <b style="color:${igColor}">${p.ig_status}</b> — ${p.ig_just}</div>
+      <div style="margin-bottom:3px"><span style="color:var(--txt3)">Divulgação:</span> <b>${p.div}</b> — ${p.div_just}</div>
+      <div style="margin-bottom:8px"><span style="color:var(--txt3)">Marca CBTH:</span> <b style="color:${p.marca==='ativa'?'#16A34A':'#EF4444'}">${p.marca}</b> — ${p.marca_just}</div>
+      <div style="border-top:1px solid var(--border);padding-top:6px;color:var(--txt2)">${p.resumo}</div>
+      <div style="margin-top:5px;font-size:10px;color:var(--txt3)">✓ Salvo automaticamente</div>`;
+  } catch(err) {
+    result.innerHTML = `<span style="color:var(--red)">Erro: ${err.message}</span>`;
+  }
+  btn.disabled=false; btn.textContent='✦ Analisar com IA';
+}
+
+// ══════════════════════════════════════════════════
+// DIVERSIDADE & INCLUSÃO
+// ══════════════════════════════════════════════════
+function renderDiversidadeBreakdown() {
+  const total = 27;
+  const comAcoes    = ESTADOS.filter(e=>e.inclusao==='acoes').length;
+  const semAcoes    = ESTADOS.filter(e=>e.inclusao==='sem_acoes').length;
+  const naoAval     = total - comAcoes - semAcoes;
+
+  const rows = [
+    {val:'acoes',     label:'Ações Inclusivas',       color:'#EAB308', list: ESTADOS.filter(e=>e.inclusao==='acoes')},
+    {val:'sem_acoes', label:'Sem ações registradas',  color:'#FEF9C3', list: ESTADOS.filter(e=>e.inclusao==='sem_acoes')},
+    {val:'',          label:'Não avaliado',            color:'#E5E7EB', list: ESTADOS.filter(e=>!e.inclusao)},
+  ];
+
+  const el = document.getElementById('div-breakdown');
+  el.innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <div style="flex:1;background:#FEFCE8;border:1px solid #FEF08A;border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#EAB308">${comAcoes}</div>
+        <div style="font-size:10px;color:#92400E;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Com ações</div>
+      </div>
+      <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--txt3)">${semAcoes}</div>
+        <div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Sem ações</div>
+      </div>
+      <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#C4B5FD">${naoAval}</div>
+        <div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Não avaliado</div>
+      </div>
+    </div>
+  ` + rows.map(r => `
+    <div class="cnpj-accordion" style="margin-bottom:5px">
+      <div class="cnpj-acc-header" onclick="
+        var dd=this.parentElement.querySelector('.cnpj-dropdown');
+        var ch=this.parentElement.querySelector('.cnpj-chevron');
+        var open=dd.style.display==='block';
+        document.querySelectorAll('#div-breakdown .cnpj-dropdown').forEach(d=>d.style.display='none');
+        document.querySelectorAll('#div-breakdown .cnpj-chevron').forEach(ch=>ch.style.transform='');
+        if(!open){dd.style.display='block';ch.style.transform='rotate(180deg)';}">
+        <div class="cnpj-acc-left">
+          <div class="cnpj-dot" style="background:${r.color}"></div>
+          <div>
+            <div class="cnpj-name">${r.label}</div>
+            <div class="cnpj-bar-wrap"><div class="cnpj-bar-inner" style="background:${r.color};width:${Math.round(r.list.length/total*100)}%"></div></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="cnpj-count" style="color:${r.color}">${r.list.length}</span>
+          <svg class="cnpj-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="transition:transform .2s;color:var(--txt3)"><path d="M2 4.5L6 8L10 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="cnpj-dropdown">
+        ${r.list.length===0
+          ? '<div class="cnpj-dd-row" style="color:var(--txt3)">Nenhum estado neste status</div>'
+          : r.list.map(e=>`<div class="cnpj-dd-row">
+              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+              <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+              ${e.inclusao_obs?`<span style="font-size:10px;color:var(--txt3);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.inclusao_obs}">📝</span>`:''}
+            </div>`).join('')
+        }
+      </div>
+    </div>
+  `).join('');
+
+  // Populate select with all evaluated states
+  const sel = document.getElementById('div-estado-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Selecionar estado...</option>' +
+    ESTADOS.filter(e=>e.nome).map(e=>`<option value="${e.uf}" ${e.uf===cur?'selected':''}>${e.uf} — ${e.nome||'Sem nome'}${e.ig?' (IG: '+e.ig+')':''}</option>`).join('');
+}
+
+async function runDiversidadeAnalysis() {
+  const sel = document.getElementById('div-estado-select');
+  const uf = sel.value;
+  if (!uf) { alert('Selecione um estado para analisar.'); return; }
+  const estado = ESTADOS.find(e=>e.uf===uf);
+  if (!estado) return;
+
+  const btn    = document.getElementById('div-ai-btn');
+  const result = document.getElementById('div-ai-result');
+  btn.disabled = true; btn.textContent = '⟳ Pesquisando...';
+  result.style.display = 'block';
+  result.innerHTML = '<span style="color:var(--txt3)">A IA está pesquisando ações de inclusão e diversidade desta federação...</span>';
+
+  const prompt = `Você é analista de diversidade e inclusão esportiva no Brasil. Analise a federação de handball do estado ${uf}: "${estado.nome||'sem nome registrado'}".
+
+Dados disponíveis:
+- Instagram: ${estado.ig||'não informado'}
+- Website: ${estado.web||'não informado'}
+- Estado: ${uf}
+
+Pesquise e avalie se esta federação realiza AÇÕES DE INCLUSÃO E REPRESENTATIVIDADE, considerando:
+1. Projetos para populações sub-representadas (mulheres, LGBTQIA+, pessoas com deficiência, comunidades carentes, indígenas, etc.)
+2. Campanhas de representatividade e diversidade
+3. Eventos inclusivos, torneios mistos, categorias adaptadas
+4. Parcerias com organizações sociais ou ONGs
+5. Comunicação inclusiva nas redes sociais
+6. Programas de base em comunidades periféricas
+
+Retorne SOMENTE um JSON válido sem markdown:
+{"inclusao":"acoes"|"sem_acoes","nivel":"baixo"|"medio"|"alto","acoes_encontradas":["ação 1","ação 2"],"obs":"resumo em 2 frases do que foi encontrado ou não encontrado","fontes":"onde você buscou a informação"}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await resp.json();
+    // Extract text from response (may contain tool use blocks)
+    const textBlock = data.content?.find(b=>b.type==='text');
+    const text = textBlock?.text || '';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const p = JSON.parse(clean);
+
+    const idx = ESTADOS.indexOf(estado);
+    ESTADOS[idx].inclusao     = p.inclusao||'';
+    ESTADOS[idx].inclusao_obs = p.obs||'';
+    saveData(); renderMap(); renderDiversidadeBreakdown();
+
+    const cor = p.inclusao==='acoes' ? '#92400E' : '#9CA3AF';
+    const label = p.inclusao==='acoes' ? 'Ações Inclusivas' : 'Sem ações registradas';
+    const acoesHtml = (p.acoes_encontradas||[]).length > 0
+      ? '<ul style="margin:4px 0 0 12px;padding:0">' + p.acoes_encontradas.map(a=>`<li style="margin-bottom:2px">${a}</li>`).join('') + '</ul>'
+      : '<span style="color:var(--txt3)">Nenhuma ação encontrada</span>';
+
+    result.innerHTML = `
+      <div style="font-weight:600;color:var(--txt);margin-bottom:6px">${uf} · Análise de Inclusão</div>
+      <div style="margin-bottom:6px">
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:${p.inclusao==='acoes'?'#FEF3C7':'#F3F4F6'};color:${cor}">
+          ${p.inclusao==='acoes'?'✦':''} ${label}${p.nivel?' · nível '+p.nivel:''}
+        </span>
+      </div>
+      <div style="font-size:11px;color:var(--txt3);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Ações encontradas:</div>
+      <div style="font-size:11px;color:var(--txt2);margin-bottom:8px">${acoesHtml}</div>
+      <div style="border-top:1px solid var(--border);padding-top:6px;color:var(--txt2);font-size:11px">${p.obs}</div>
+      ${p.fontes?`<div style="margin-top:4px;font-size:10px;color:var(--txt3)">🔍 ${p.fontes}</div>`:''}
+      <div style="margin-top:5px;font-size:10px;color:var(--txt3)">✓ Salvo automaticamente</div>`;
+  } catch(err) {
+    result.innerHTML = `<span style="color:var(--red)">Erro na análise: ${err.message}</span>`;
+  }
+  btn.disabled=false; btn.textContent='✦ Analisar com IA';
+}
+
+// ══════════════════════════════════════════════════
+// CBTH PELO BRASIL
+// ══════════════════════════════════════════════════
+const CBTH_CRITERIOS = [
+  {field:'cbth_ev_logo',  label:'Evento Anual c/ Logo CBTH', color:'#15803D', icon:'🏆'},
+  {field:'cbth_atleta',   label:'Ativação com Atleta',        color:'#0891B2', icon:'🏅'},
+  {field:'cbth_palestra', label:'Palestras & Painéis',        color:'#7C3AED', icon:'🎤'},
+  {field:'cbth_start',    label:'Evento Start (iniciantes)',  color:'#EA580C', icon:'🚀'},
+];
+
+function renderCbthBreakdown() {
+  const total = 27;
+  const el = document.getElementById('cbth-breakdown');
+
+  // Score summary tiles
+  const scores = [0,1,2,3,4].map(n => ({
+    n, count: ESTADOS.filter(e => CBTH_CRITERIOS.filter(cr=>e[cr.field]==='sim').length === n).length
+  }));
+  const scoreColors = {0:'#E2E8F0', 1:'#BBF7D0', 2:'#4ADE80', 3:'#16A34A', 4:'#15803D'};
+
+  el.innerHTML = CBTH_CRITERIOS.map(cr => {
+    const com    = ESTADOS.filter(e=>e[cr.field]==='sim');
+    const sem    = ESTADOS.filter(e=>e[cr.field]==='nao');
+    const naoAv  = ESTADOS.filter(e=>!e[cr.field]);
+    return `
+    <div class="cnpj-accordion" style="margin-bottom:5px">
+      <div class="cnpj-acc-header" onclick="
+        var dd=this.parentElement.querySelector('.cnpj-dropdown');
+        var ch=this.parentElement.querySelector('.cnpj-chevron');
+        var open=dd.style.display==='block';
+        document.querySelectorAll('#cbth-breakdown .cnpj-dropdown').forEach(d=>d.style.display='none');
+        document.querySelectorAll('#cbth-breakdown .cnpj-chevron').forEach(c=>c.style.transform='');
+        if(!open){dd.style.display='block';ch.style.transform='rotate(180deg)';}">
+        <div class="cnpj-acc-left">
+          <span style="font-size:14px;line-height:1">${cr.icon}</span>
+          <div>
+            <div class="cnpj-name">${cr.label}</div>
+            <div style="display:flex;gap:6px;margin-top:3px;align-items:center">
+              <div style="width:70px;height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+                <div style="height:100%;background:var(--txt3);width:${Math.round(com.length/total*100)}%;border-radius:99px"></div>
+              </div>
+              <span style="font-size:10px;color:var(--txt3)">${com.length}/${total}</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="cnpj-count" style="color:var(--txt3)">${com.length}</span>
+          <svg class="cnpj-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="transition:transform .2s;color:var(--txt3)"><path d="M2 4.5L6 8L10 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="cnpj-dropdown">
+        <div style="padding:6px 10px 4px;border-bottom:1px solid var(--border)">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${cr.color}">Com esta ação (${com.length})</span>
+        </div>
+        ${com.length===0
+          ? '<div class="cnpj-dd-row" style="color:var(--txt3)">Nenhum estado</div>'
+          : com.map(e=>`<div class="cnpj-dd-row">
+              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+              <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+              <span style="font-size:10px;color:${cr.color};font-weight:600">✓</span>
+            </div>`).join('')
+        }
+        ${sem.length > 0 ? `
+        <div style="padding:6px 10px 4px;border-bottom:1px solid var(--border);border-top:1px solid var(--border)">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3)">Sem esta ação (${sem.length})</span>
+        </div>
+        ${sem.map(e=>`<div class="cnpj-dd-row">
+              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+              <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+              <span style="font-size:10px;color:var(--txt3)">—</span>
+            </div>`).join('')}` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Populate estado select
+  const sel = document.getElementById('cbth-estado-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Selecionar estado...</option>' +
+    ESTADOS.filter(e=>e.nome).map(e=>`<option value="${e.uf}" ${e.uf===cur?'selected':''}>${e.uf} — ${e.nome||'Sem nome'}</option>`).join('');
+}
+
+async function runCbthAnalysis() {
+  const sel = document.getElementById('cbth-estado-select');
+  const uf = sel.value;
+  if (!uf) { alert('Selecione um estado para analisar.'); return; }
+  const estado = ESTADOS.find(e=>e.uf===uf);
+  if (!estado) return;
+
+  const btn    = document.getElementById('cbth-ai-btn');
+  const result = document.getElementById('cbth-ai-result');
+  btn.disabled = true; btn.textContent = '⟳ Pesquisando...';
+  result.style.display = 'block';
+  result.innerHTML = '<span style="color:var(--txt3)">A IA está pesquisando evidências das ações CBTH...</span>';
+
+  const prompt = `Você é analista de eventos esportivos do handebol brasileiro. Analise a federação do estado ${uf}: "${estado.nome||'sem nome'}".
+
+Dados:
+- Instagram: ${estado.ig||'não informado'}
+- Website: ${estado.web||'não informado'}
+- Estado: ${uf}
+
+Pesquise na internet (redes sociais, sites, notícias) por evidências destas 4 ações específicas do programa CBTH pelo Brasil:
+
+1. EVENTO ANUAL COM LOGO CBTH: A federação realizou algum torneio, campeonato ou evento anual em 2023 ou 2024 usando o logo da CBTH (Confederação Brasileira de Handebol)?
+2. ATIVAÇÃO COM ATLETA: A federação promoveu ativações, visitas, clínicas ou eventos com atletas da seleção brasileira ou atletas renomados?
+3. PALESTRAS E PAINÉIS: A federação organizou palestras, painéis, fóruns, workshops ou eventos educativos voltados para treinadores, árbitros ou comunidade?
+4. EVENTO START: A federação realizou eventos "Start" ou iniciação esportiva, projetos para novos praticantes, aulões de handebol, escolinhas abertas ou eventos para iniciantes?
+
+Retorne SOMENTE um JSON válido sem markdown:
+{
+  "ev_logo": "sim"|"nao",
+  "ev_logo_ev": "nome do evento encontrado ou vazio",
+  "atleta": "sim"|"nao",
+  "atleta_ev": "detalhes encontrados ou vazio",
+  "palestra": "sim"|"nao",
+  "palestra_ev": "detalhes encontrados ou vazio",
+  "start": "sim"|"nao",
+  "start_ev": "detalhes encontrados ou vazio",
+  "resumo": "2 frases sobre o nível de engajamento com o programa CBTH",
+  "fontes": "onde foram encontradas as informações"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await resp.json();
+    const textBlock = data.content?.find(b=>b.type==='text');
+    const text = textBlock?.text || '';
+    const p = JSON.parse(text.replace(/```json|```/g,'').trim());
+
+    const idx = ESTADOS.indexOf(estado);
+    ESTADOS[idx].cbth_ev_logo  = p.ev_logo  || 'nao';
+    ESTADOS[idx].cbth_atleta   = p.atleta   || 'nao';
+    ESTADOS[idx].cbth_palestra = p.palestra || 'nao';
+    ESTADOS[idx].cbth_start    = p.start    || 'nao';
+    saveData(); renderMap(); renderCbthBreakdown();
+
+    const mkRow = (label, icon, val, ev) =>
+      `<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;line-height:1.4">${icon}</span>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:600;color:var(--txt)">${label}</div>
+          ${ev?`<div style="font-size:10px;color:var(--txt3);margin-top:1px">${ev}</div>`:''}
+        </div>
+        <span style="font-size:12px;font-weight:700;color:${val==='sim'?'#16A34A':'#9CA3AF'}">${val==='sim'?'✓ Sim':'—'}</span>
+      </div>`;
+
+    result.innerHTML = `
+      <div style="font-weight:600;color:var(--txt);margin-bottom:8px">${uf} · Ações CBTH pelo Brasil</div>
+      ${mkRow('Evento Anual c/ Logo','🏆',p.ev_logo,p.ev_logo_ev)}
+      ${mkRow('Ativação com Atleta','🏅',p.atleta,p.atleta_ev)}
+      ${mkRow('Palestras & Painéis','🎤',p.palestra,p.palestra_ev)}
+      ${mkRow('Evento Start','🚀',p.start,p.start_ev)}
+      <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;color:var(--txt2);font-size:11px">${p.resumo}</div>
+      ${p.fontes?`<div style="margin-top:4px;font-size:10px;color:var(--txt3)">🔍 ${p.fontes}</div>`:''}
+      <div style="margin-top:5px;font-size:10px;color:var(--txt3)">✓ Salvo automaticamente</div>`;
+  } catch(err) {
+    result.innerHTML = `<span style="color:var(--red)">Erro: ${err.message}</span>`;
+  }
+  btn.disabled=false; btn.textContent='✦ Analisar com IA';
+}
+
+// ══════════════════════════════════════════════════
+// FEDERAÇÃO DESTAQUE RANKING
+// ══════════════════════════════════════════════════
+function renderDestaqueRanking() {
+  const MAX = 11;
+
+  const all27 = ESTADOS
+    .map(e => ({...e, score: VIZ.destaque.getScore(e)}))
+    .sort((a,b) => b.score - a.score);
+
+  const ranked = all27.filter(e => e.nome);
+
+  const medal = (i) => i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+
+  const medalStyle = (i) => {
+    if(i===0) return {bg:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',border:'#F5C842',color:'#92400E',label:'Ouro'};
+    if(i===1) return {bg:'linear-gradient(135deg,#F0F4FF,#DDE6F5)',border:'#A8BDD8',color:'#2C4A6E',label:'Prata'};
+    if(i===2) return {bg:'linear-gradient(135deg,#FDF6EE,#F5E6D0)',border:'#CD7F32',color:'#7C3400',label:'Bronze'};
+    return {bg:'#FAFBFC',border:'#EEF0F3',color:'var(--txt2)',label:''};
+  };
+
+  const tier = (s) => {
+    if(s>=7) return {color:'#6B7280'};
+    if(s>0)  return {color:'#CBD5E0'};
+    return   {color:'#F1F4F8'};
+  };
+
+
+  const container = document.getElementById('destaque-content');
+  container.innerHTML = `
+    <div style="padding:14px 16px 6px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3)">🏆 Top 5 · Federação Destaque</div>
+    </div>
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+      ${ranked.slice(0,5).map((fed,i) => {
+        const ms = medalStyle(i);
+        const pct = Math.round(fed.score/MAX*100);
+        const isTop3 = i < 3;
+        return `
+        <div style="display:flex;align-items:center;gap:9px;background:${ms.bg};border:1.5px solid ${ms.border};border-radius:8px;padding:8px 10px">
+          <span style="font-size:${isTop3?'18px':'12px'};min-width:20px;text-align:center;line-height:1">${medal(i)||`<span style='font-family:"DM Mono",monospace;font-size:11px;font-weight:700;color:var(--txt3)'>${i+1}</span>`}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:baseline;gap:5px">
+              <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--txt)">${fed.uf}</span>
+              ${isTop3?`<span style="font-size:9px;font-weight:700;color:${ms.color};background:${ms.border}33;padding:1px 5px;border-radius:6px">${ms.label}</span>`:''}
+            </div>
+            <div style="font-size:10px;color:var(--txt3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">${(fed.nome||'').replace(/^Fed\.\s*/i,'').replace(/^Federação\s*/i,'')}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+            <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:${ms.color||tier(fed.score).color}">${fed.score}<span style="font-size:9px;font-weight:400;color:var(--txt3)">/${MAX}</span></span>
+            <div style="width:44px;height:3px;background:var(--border);border-radius:99px;overflow:hidden">
+              <div style="height:100%;background:${ms.color||tier(fed.score).color};width:${pct}%;border-radius:99px"></div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="padding:10px 16px 6px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+      <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3)">📋 Ranking Completo · 27 Estados</div>
+    </div>
+    <div>
+      ${all27.map((e) => {
+        const t = tier(e.score);
+        const pct = Math.round(e.score/MAX*100);
+        const rankedPos = ranked.indexOf(e);
+        const posLabel = e.nome
+          ? (rankedPos < 3 ? medal(rankedPos) : `<span style='font-family:"DM Mono",monospace;font-size:10px;color:var(--txt3);font-weight:700'>${rankedPos+1}º</span>`)
+          : '<span style="color:var(--txt3);font-size:10px">—</span>';
+        const rowBg = rankedPos===0?'#FFFBEB':rankedPos===1?'#F0F4FF':rankedPos===2?'#FDF6EE':'var(--surface)';
+        return `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:${rowBg}">
+          <span style="font-size:11px;min-width:20px;text-align:center;line-height:1">${posLabel}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--txt);min-width:26px">${e.uf}</span>
+          <span style="font-size:11px;color:${e.nome?'var(--txt2)':'var(--txt3)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(e.nome||'Sem cadastro').replace(/^Fed\.\s*/i,'').replace(/^Federação\s*/i,'')}</span>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+            <div style="width:36px;height:3px;background:var(--border);border-radius:99px;overflow:hidden">
+              <div style="height:100%;background:${t.color};width:${pct}%;border-radius:99px"></div>
+            </div>
+            <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:${t.color};min-width:16px;text-align:right">${e.score}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // also clear the old panel if exists
+  const old = document.getElementById('ranking-panel-content');
+  if (old) old.innerHTML = '';
+}
+
+// ══════════════════════════════════════════════════
+// BANCO DE JOGADORES SUMMARY
+// ══════════════════════════════════════════════════
+function renderBancoJogSummary() {
+  const total = 27;
+  const sim   = ESTADOS.filter(e=>e.banco_jog==='sim');
+  const nao   = ESTADOS.filter(e=>e.banco_jog!=='sim');
+  const el    = document.getElementById('banco-jog-summary');
+
+  const mkRows = (list, icon) => list.length === 0
+    ? '<div class="cnpj-dd-row" style="color:var(--txt3)">Nenhuma federação</div>'
+    : list.map(e=>`
+        <div class="cnpj-dd-row">
+          <span style="font-size:11px">${icon}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+          <span style="font-size:11px;color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+        </div>`).join('');
+
+  const mkAccordion = (id, bgClass, borderColor, countColor, count, pct, label, rows) => `
+    <div class="cnpj-accordion" id="${id}" style="border:1.5px solid ${borderColor};border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div class="cnpj-acc-header" style="background:${bgClass}" onclick="
+        var dd=this.parentElement.querySelector('.cnpj-dropdown');
+        var ch=this.parentElement.querySelector('.cnpj-chevron');
+        dd.style.display=dd.style.display==='block'?'none':'block';
+        ch.style.transform=dd.style.display==='block'?'rotate(180deg)':'';">
+        <div style="display:flex;flex-direction:column;flex:1">
+          <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:${countColor};line-height:1">${count}</div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${countColor};margin-top:3px;opacity:.8">${label}</div>
+          <div style="font-size:10px;color:${countColor};opacity:.6;margin-top:1px">${pct}% do total</div>
+        </div>
+        <svg class="cnpj-chevron" width="14" height="14" viewBox="0 0 12 12" fill="none" style="transition:transform .2s;color:${countColor};flex-shrink:0;align-self:center"><path d="M2 4.5L6 8L10 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="cnpj-dropdown">${rows}</div>
+    </div>`;
+
+  const pctSim = Math.round(sim.length/total*100);
+  const pctNao = Math.round(nao.length/total*100);
+
+  el.innerHTML = `
+    <!-- Progress bar -->
+    <div style="height:5px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:12px">
+      <div style="height:100%;background:linear-gradient(90deg,#78350F,#B45309);border-radius:99px;width:${pctSim}%;transition:width .6s cubic-bezier(.4,0,.2,1)"></div>
+    </div>
+
+    ${mkAccordion('bj-sim','#FEF3E2','#D97706','#78350F',sim.length,pctSim,'✓ Alimentando o banco',mkRows(sim,'✅'))}
+    ${mkAccordion('bj-nao','var(--surface2)','var(--border)','var(--txt3)',nao.length,pctNao,'✗ Não alimentando',mkRows(nao,'⬜'))}
+  `;
+}
+
+// ══════════════════════════════════════════════════
+// TABLE
+// ══════════════════════════════════════════════════
+const REGION_BADGE = {Norte:'badge-norte',Nordeste:'badge-nordeste','Centro-Oeste':'badge-co',Sudeste:'badge-sudeste',Sul:'badge-sul'};
+const CNPJ_OPTS = ['','seminfo','inativo','regularizando','ativo'];
+const CNPJ_LBL  = {'':'—',seminfo:'Sem info',inativo:'Inativo',regularizando:'Regularizando',ativo:'Ativo'};
+const IG_OPTS   = ['','ativo','inconstante','inativo'];
+const IG_LBL    = {'':'—',ativo:'IG Ativo',inconstante:'IG Inconstante',inativo:'IG Inativo'};
+const DIV_OPTS  = ['','sem','baixa','media','alta'];
+const DIV_LBL   = {'':'—',sem:'Sem divulgação',baixa:'Baixa',media:'Média',alta:'Alta'};
+const MRC_OPTS  = ['','ativa','inativa'];
+const MRC_LBL   = {'':'—',ativa:'Marca Ativa',inativa:'Marca Inativa'};
+
+const CNPJ_COLOR = {seminfo:'#EAB308',inativo:'#EF4444',regularizando:'#3B82F6',ativo:'#22C55E'};
+const IG_COLOR   = {ativo:'#16A34A',inconstante:'#F59E0B',inativo:'#EF4444'};
+const DIV_COLOR  = {sem:'#EF4444',baixa:'#F59E0B',media:'#3B82F6',alta:'#16A34A'};
+const MRC_COLOR  = {ativa:'#16A34A',inativa:'#EF4444'};
+
+let currentFilter='Todos', searchQuery='';
+
+function mkSel(idx, field, val, opts, lbls, colorMap) {
+  const color = colorMap[val]||'#CBD5E0';
+  return `<select class="sel-field" data-idx="${idx}" data-field="${field}" style="border-left:3px solid ${color}">
+    ${opts.map(v=>`<option value="${v}" ${val===v?'selected':''}>${lbls[v]}</option>`).join('')}
+  </select>`;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  const rows = ESTADOS.filter(e=>{
+    const mr = currentFilter==='Todos'||e.reg===currentFilter;
+    const q  = searchQuery.toLowerCase();
+    return mr && (!q || e.uf.toLowerCase().includes(q) || (e.nome||'').toLowerCase().includes(q) || (e.resp||'').toLowerCase().includes(q));
+  });
+  document.getElementById('table-badge').textContent = rows.length+' estados';
+  if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="10">Nenhum resultado.</td></tr>';return;}
+
+  const ed=(idx,field,val)=>`<span contenteditable="true" data-idx="${idx}" data-field="${field}">${val||'<span class="cell-add">+ Adicionar</span>'}</span>`;
+
+  tbody.innerHTML = rows.map(e=>{
+    const idx=ESTADOS.indexOf(e);
+    return `<tr>
+      <td><span class="td-uf">${e.uf}</span></td>
+      <td><span class="badge ${REGION_BADGE[e.reg]||'badge-sul'}">${e.reg}</span></td>
+      <td>${ed(idx,'nome',e.nome)}</td>
+      <td>${ed(idx,'resp',e.resp)}</td>
+      <td>${ed(idx,'email',e.email)}</td>
+      <td>${ed(idx,'wpp',e.wpp)}</td>
+      <td>${ed(idx,'ig',e.ig)}</td>
+      <td>${ed(idx,'web',e.web)}</td>
+      <td>${ed(idx,'t1',e.t1)}</td>
+      <td>${ed(idx,'t2',e.t2)}</td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('[contenteditable]').forEach(el=>{
+    el.addEventListener('focus',function(){if(this.querySelector('span'))this.innerHTML='';});
+    el.addEventListener('blur',function(){
+      const val=this.innerText.trim();
+      ESTADOS[+this.dataset.idx][this.dataset.field]=val;
+      if(!val)this.innerHTML='<span class="cell-add">+ Adicionar</span>';
+      saveData(); renderMap();
+    });
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.target.blur();}});
+  });
+}
+
+// ══════════════════════════════════════════════════
+// EVENTS & INIT
+// ══════════════════════════════════════════════════
+document.getElementById('current-date').textContent =
+  new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+
+document.querySelectorAll('.nav-tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('page-'+t.dataset.page).classList.add('active');
+  if(t.dataset.page==='federacoes') setTimeout(renderMap,50);
+  if(t.dataset.page==='historico') initHistorico();
+}));
+
+document.querySelectorAll('.viz-tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.viz-tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  activeViz=t.dataset.viz;
+  renderMap();
+  showSidebarFor(activeViz);
+}));
+
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active');
+  currentFilter=c.dataset.region;
+  renderTable();
+}));
+document.getElementById('search-input').addEventListener('input',function(){
+  searchQuery=this.value;renderTable();
+});
+
+// Make bin public so CORS works from any browser
+async function ensureBinPublic() {
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/meta`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': BIN_KEY },
+      body: JSON.stringify({ private: false })
+    });
+  } catch(_) {} // silent — non-critical
+}
+
+loadData().then(() => {
+  ensureBinPublic();
+  renderTable();
+  initHistorico();
+  setTimeout(()=>{
+    renderMap();
+    showSidebarFor('destaque');
+    updateChartFromHistorico();
+  },100);
+});
+
+window.addEventListener('resize',()=>{ if(document.getElementById('page-federacoes').classList.contains('active'))renderMap(); });
+
+// ══════════════════════════════════════════════════
+// MONTHLY PROGRESSION CHART
+// ══════════════════════════════════════════════════
+const MONTHS = ['Set','Out','Nov','Dez','Jan','Fev','Mar'];
+
+// Simulated monthly progression data per viz layer
+// Each dataset = one category tracked over 7 months
+const CHART_DATA = {
+  destaque: {
+    datasets: [
+      {label:'Avançando (≥60%)', data:[4,5,6,7,8,9,11], color:'#6B7280'},
+      {label:'Iniciando',        data:[8,9,10,10,10,9,9], color:'#CBD5E0'},
+      {label:'Sem dados',        data:[15,13,11,10,9,9,7], color:'#F1F4F8'},
+    ]
+  },
+  gestao: {
+    datasets: [
+      {label:'CNPJ Ativo',        data:[10,11,12,13,13,14,15], color:'#1D4ED8'},
+      {label:'Regularizando',     data:[4,4,3,3,3,3,3],         color:'#60A5FA'},
+      {label:'Inativo',           data:[7,7,7,6,6,5,5],         color:'#BFDBFE'},
+    ]
+  },
+  cbth: {
+    datasets: [
+      {label:'Todas 4 ações', data:[2,3,4,5,6,7,8],  color:'#15803D'},
+      {label:'3 ações',       data:[3,3,4,4,4,5,5],  color:'#16A34A'},
+      {label:'2 ações',       data:[4,5,4,4,4,3,3],  color:'#4ADE80'},
+      {label:'1 ação',        data:[5,4,4,3,3,3,3],  color:'#BBF7D0'},
+    ]
+  },
+  digital: {
+    datasets: [
+      {label:'IG Ativo',       data:[8,9,10,11,12,13,13], color:'#6B21A8'},
+      {label:'IG Inconstante', data:[5,5,5,4,4,4,4],      color:'#A855F7'},
+      {label:'IG Inativo',     data:[6,5,5,5,4,4,4],      color:'#D8B4FE'},
+    ]
+  },
+  diversidade: {
+    datasets: [
+      {label:'Com ações',   data:[8,9,10,11,12,13,14], color:'#EAB308'},
+      {label:'Sem ações',   data:[10,10,9,9,8,8,8],    color:'#FEF08A'},
+      {label:'Não avaliado',data:[9,8,8,7,7,6,5],      color:'#CBD5E0'},
+    ]
+  },
+  banco: {
+    datasets: [
+      {label:'Alimentando', data:[6,7,8,9,11,12,14], color:'#78350F'},
+      {label:'Não aliment.',data:[21,20,19,18,16,15,13], color:'#CBD5E0'},
+    ]
+  },
+};
+
+let progressionChart = null;
+let chartOpen = true;
+
+function toggleChart() {
+  const body = document.getElementById('chart-body');
+  const icon = document.getElementById('chart-toggle-icon');
+  chartOpen = !chartOpen;
+  body.style.display = chartOpen ? '' : 'none';
+  icon.textContent = chartOpen ? '▲' : '▼';
+}
+
+function renderProgressionChart(viz) {
+  const data = CHART_DATA[viz];
+  if (!data) return;
+
+  if (progressionChart) {
+    progressionChart.destroy();
+    progressionChart = null;
+  }
+
+  const ctx = document.getElementById('progression-chart').getContext('2d');
+
+  progressionChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: MONTHS,
+      datasets: data.datasets.map(d => ({
+        label: d.label,
+        data: d.data,
+        borderColor: d.color,
+        backgroundColor: d.color + '18',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        tension: 0.4,
+        fill: false,
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: {mode:'index', intersect:false},
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            font: {family:'Instrument Sans', size:10},
+            boxWidth: 10,
+            boxHeight: 10,
+            borderRadius: 3,
+            padding: 8,
+            color: '#4A5568',
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          borderColor: '#E4E8EF',
+          borderWidth: 1,
+          titleColor: '#0D1117',
+          bodyColor: '#4A5568',
+          titleFont: {family:'Syne', size:11, weight:'700'},
+          bodyFont: {family:'Instrument Sans', size:11},
+          padding: 10,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} estados`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {color:'rgba(0,0,0,0.04)'},
+          ticks: {font:{family:'DM Mono', size:10}, color:'#9AA3B2'}
+        },
+        y: {
+          min: 0,
+          max: 27,
+          grid: {color:'rgba(0,0,0,0.04)'},
+          ticks: {
+            font:{family:'DM Mono', size:10},
+            color:'#9AA3B2',
+            stepSize: 5,
+            callback: v => v === 27 ? '27' : v
+          }
+        }
+      }
+    }
+  });
+}
+
+// Hook into viz tab changes to re-render chart
+const _origShowSidebarFor = showSidebarFor;
+showSidebarFor = function(viz) {
+  _origShowSidebarFor(viz);
+  renderProgressionChart(viz);
+};
+
+setTimeout(() => renderProgressionChart('destaque'), 200);
+
+// ══════════════════════════════════════════════════
+// HISTÓRICO MENSAL — MATRIZ
+// ══════════════════════════════════════════════════
+
+// Category config: field -> {label, options: [{val, label, bg, color}]}
+const HIST_CAT_CFG = {
+  cnpj: {
+    label:'CNPJ', btnColor:'#1D4ED8',
+    opts:[
+      {val:'ativo',         lbl:'Ativo',         bg:'#1D4ED8', color:'#fff'},
+      {val:'regularizando', lbl:'Regularizando',  bg:'#60A5FA', color:'#fff'},
+      {val:'inativo',       lbl:'Inativo',        bg:'#BFDBFE', color:'#1D4ED8'},
+      {val:'',              lbl:'—',              bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  ig_status: {
+    label:'Status IG', btnColor:'#6B21A8',
+    opts:[
+      {val:'ativo',       lbl:'IG Ativo',       bg:'#6B21A8', color:'#fff'},
+      {val:'inconstante', lbl:'Inconstante',    bg:'#A855F7', color:'#fff'},
+      {val:'inativo',     lbl:'IG Inativo',     bg:'#D8B4FE', color:'#6B21A8'},
+      {val:'',            lbl:'—',              bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  div: {
+    label:'Divulgação', btnColor:'#6B21A8',
+    opts:[
+      {val:'alta',  lbl:'Alta',   bg:'#6B21A8', color:'#fff'},
+      {val:'media', lbl:'Média',  bg:'#A855F7', color:'#fff'},
+      {val:'baixa', lbl:'Baixa',  bg:'#D8B4FE', color:'#6B21A8'},
+      {val:'sem',   lbl:'Sem',    bg:'#F3E8FF', color:'#6B21A8'},
+      {val:'',      lbl:'—',      bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  marca: {
+    label:'Marca CBTH', btnColor:'#6B21A8',
+    opts:[
+      {val:'ativa',   lbl:'Ativa',   bg:'#6B21A8', color:'#fff'},
+      {val:'inativa', lbl:'Inativa', bg:'#D8B4FE', color:'#6B21A8'},
+      {val:'',        lbl:'—',       bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  inclusao: {
+    label:'Inclusão', btnColor:'#EAB308',
+    opts:[
+      {val:'acoes',     lbl:'Com ações', bg:'#EAB308', color:'#fff'},
+      {val:'sem_acoes', lbl:'Sem ações', bg:'#FEF9C3', color:'#92400E'},
+      {val:'',          lbl:'—',         bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  cbth_ev_logo: {
+    label:'Ev. c/ Logo', btnColor:'#16A34A',
+    opts:[
+      {val:'sim', lbl:'Sim', bg:'#16A34A', color:'#fff'},
+      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  cbth_atleta: {
+    label:'At. Atleta', btnColor:'#16A34A',
+    opts:[
+      {val:'sim', lbl:'Sim', bg:'#16A34A', color:'#fff'},
+      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  cbth_palestra: {
+    label:'Palestras', btnColor:'#16A34A',
+    opts:[
+      {val:'sim', lbl:'Sim', bg:'#16A34A', color:'#fff'},
+      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  cbth_start: {
+    label:'Start', btnColor:'#16A34A',
+    opts:[
+      {val:'sim', lbl:'Sim', bg:'#16A34A', color:'#fff'},
+      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+  banco_jog: {
+    label:'Banco Jog.', btnColor:'#78350F',
+    opts:[
+      {val:'sim', lbl:'Sim', bg:'#78350F', color:'#fff'},
+      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
+    ]
+  },
+};
+
+let activeCat = 'cnpj';
+let activeMatrixMes = null; // when set, matrix view is open for this month
+
+const MO_NAMES = {'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio',
+  '06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
+const MO_SHORT = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun',
+  '07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
+
+function voltarMeses() {
+  activeMatrixMes = null;
+  document.getElementById('hist-view-months').style.display = 'flex';
+  document.getElementById('hist-view-matrix-bar').style.display = 'none';
+  document.getElementById('hist-legend-bar').style.display = 'none';
+  document.getElementById('hist-content-months').style.display = '';
+  document.getElementById('hist-content-matrix').style.display = 'none';
+  renderMonthCards();
+}
+
+function abrirMes(mes) {
+  activeMatrixMes = mes;
+  const [y, mo] = mes.split('-');
+  document.getElementById('hist-matrix-title').textContent = `${MO_NAMES[mo] || mo} ${y}`;
+  document.getElementById('hist-view-months').style.display = 'none';
+  document.getElementById('hist-view-matrix-bar').style.display = 'flex';
+  document.getElementById('hist-legend-bar').style.display = 'flex';
+  document.getElementById('hist-content-months').style.display = 'none';
+  document.getElementById('hist-content-matrix').style.display = '';
+  renderHistoricoMatrix();
+}
+
+function renderMonthCards() {
+  const meses = getHistMeses();
+  const cards = document.getElementById('hist-month-cards');
+  const empty = document.getElementById('hist-empty-msg');
+
+  if (!meses.length) {
+    cards.style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+  cards.style.display = '';
+  empty.style.display = 'none';
+
+  const curMes = new Date().toISOString().slice(0, 7);
+  cards.innerHTML = [...meses].reverse().map(m => {
+    const [y, mo] = m.split('-');
+    const rows = HISTORICO.filter(r => r.mes === m);
+    const total = rows.length;
+    const filled = rows.filter(r => r[activeCat] && r[activeCat] !== '').length;
+    const pct = total ? Math.round(filled / total * 100) : 0;
+    const isCur = m === curMes;
+    return `
+    <div onclick="abrirMes('${m}')" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1.5px solid ${isCur ? 'var(--txt)' : 'var(--border)'};border-radius:10px;padding:14px 20px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
+      <div style="font-size:28px">📅</div>
+      <div style="flex:1">
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--txt)">${MO_NAMES[mo] || mo} ${y}${isCur ? ' <span style="font-size:10px;background:var(--txt);color:#fff;padding:1px 7px;border-radius:10px;margin-left:6px">Atual</span>' : ''}</div>
+        <div style="font-size:11px;color:var(--txt3);margin-top:3px">${total} estados registrados · ${filled} com dados em <b>${HIST_CAT_CFG[activeCat]?.label || activeCat}</b></div>
+        <div style="width:200px;height:4px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:6px">
+          <div style="height:100%;background:${HIST_CAT_CFG[activeCat]?.btnColor || '#16A34A'};width:${pct}%;border-radius:99px;transition:width .4s"></div>
+        </div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--txt2)">${pct}%</div>
+      <div style="color:var(--txt3);font-size:16px">›</div>
+    </div>`;
+  }).join('');
+}
+function setHistCat(cat) {
+  activeCat = cat;
+  document.querySelectorAll('.hist-cat-btn').forEach(b => {
+    const isCur = b.id === 'hist-cat-'+cat;
+    b.classList.toggle('active', isCur);
+    const cfg = HIST_CAT_CFG[cat];
+    b.style.background = isCur ? cfg.btnColor : '';
+    b.style.color = isCur ? '#fff' : '';
+    b.style.borderColor = isCur ? cfg.btnColor : '';
+  });
+  if (activeMatrixMes) renderHistoricoMatrix();
+  else renderMonthCards();
+}
+
+function getHistMeses() {
+  return [...new Set(HISTORICO.map(r=>r.mes))].sort();
+}
+
+function getHistCell(uf, mes) {
+  return HISTORICO.find(r=>r.uf===uf && r.mes===mes) || null;
+}
+
+function setHistCell(uf, mes, field, val) {
+  let row = HISTORICO.find(r=>r.uf===uf && r.mes===mes);
+  if (!row) {
+    const estado = ESTADOS.find(e=>e.uf===uf);
+    row = {mes, uf, nome:estado?.nome||'', resp_com:'',
+      cnpj:'', ig_status:'', div:'', marca:'', inclusao:'',
+      cbth_ev_logo:'nao', cbth_atleta:'nao', cbth_palestra:'nao', cbth_start:'nao', banco_jog:'nao'};
+    HISTORICO.push(row);
+  }
+  row[field] = val;
+  saveHistorico();
+  updateChartFromHistorico();
+}
+
+function addHistMes() {
+  const input = document.getElementById('hist-new-month');
+  const m = input?.value;
+  if (!m || !/^\d{4}-\d{2}$/.test(m)) {
+    if (input) { input.style.borderColor='#EF4444'; setTimeout(()=>input.style.borderColor='',1200); }
+    return;
+  }
+  ESTADOS.forEach(e => {
+    if (!HISTORICO.find(r=>r.uf===e.uf&&r.mes===m)) {
+      HISTORICO.push({mes:m, uf:e.uf, nome:e.nome||'', resp_com:'',
+        cnpj:'', ig_status:'', div:'', marca:'', inclusao:'',
+        cbth_ev_logo:'nao', cbth_atleta:'nao', cbth_palestra:'nao', cbth_start:'nao', banco_jog:'nao'});
+    }
+  });
+  saveHistorico();
+  abrirMes(m);
+}
+
+function snapshotMesAtual() {
+  const m = new Date().toISOString().slice(0,7);
+  if (!confirm(`Criar snapshot de ${m} com os dados atuais? Dados existentes para este mês serão sobrescritos.`)) return;
+  HISTORICO = HISTORICO.filter(r=>r.mes!==m);
+  ESTADOS.forEach(e => HISTORICO.push({
+    mes:m, uf:e.uf, nome:e.nome||'', resp_com:e.resp_com||'',
+    cnpj:e.cnpj||'', ig_status:e.ig_status||'', div:e.div||'',
+    marca:e.marca||'', inclusao:e.inclusao||'',
+    cbth_ev_logo:e.cbth_ev_logo||'nao', cbth_atleta:e.cbth_atleta||'nao',
+    cbth_palestra:e.cbth_palestra||'nao', cbth_start:e.cbth_start||'nao',
+    banco_jog:e.banco_jog||'nao'
+  }));
+  saveHistorico();
+  abrirMes(m);
+  updateChartFromHistorico();
+}
+
+function renderHistoricoMatrix() {
+  const mes = activeMatrixMes;
+  if (!mes) { renderMonthCards(); return; }
+
+  const cfg = HIST_CAT_CFG[activeCat];
+  const [y, mo] = mes.split('-');
+
+  // Legend bar
+  const legendBar = document.getElementById('hist-legend-bar');
+  legendBar.innerHTML = cfg.opts.filter(o=>o.val!=='').map(o=>
+    `<div style="display:flex;align-items:center;gap:5px;font-size:11px">
+      <div style="width:10px;height:10px;border-radius:2px;background:${o.bg};border:1px solid rgba(0,0,0,0.1)"></div>
+      <span style="color:var(--txt2)">${o.lbl}</span>
+    </div>`
+  ).join('') + `<div style="display:flex;align-items:center;gap:5px;font-size:11px">
+    <div style="width:10px;height:10px;border-radius:2px;background:#F1F4F8;border:1px solid var(--border)"></div>
+    <span style="color:var(--txt3)">Não registrado</span>
+  </div>`;
+
+  // Header — single month column
+  document.getElementById('hist-thead').innerHTML = `<tr>
+    <th class="hcol-uf"    style="position:sticky;left:0;z-index:5;background:var(--surface2)">UF</th>
+    <th class="hcol-nome"  style="position:sticky;left:36px;z-index:5;background:var(--surface2);min-width:180px;border-right:1.5px solid var(--border)">Federação</th>
+    <th class="hcol-month cur" style="min-width:160px">${MO_SHORT[mo]||mo}/${y.slice(2)} · ${cfg.label}</th>
+  </tr>`;
+
+  // Body
+  document.getElementById('hist-tbody').innerHTML = ESTADOS.map(e => {
+    const row = getHistCell(e.uf, mes);
+    const val = row ? (row[activeCat] || '') : '';
+    const opt = cfg.opts.find(o=>o.val===val) || cfg.opts[cfg.opts.length-1];
+    const optsList = cfg.opts.map(o=>`<option value="${o.val}" ${val===o.val?'selected':''}>${o.lbl}</option>`).join('');
+    const nome = (e.nome||'').replace(/^Fed\.\s*/i,'').replace(/^Federação\s*/i,'') || e.uf;
+    return `<tr>
+      <td class="hrow-uf">${e.uf}</td>
+      <td class="hrow-label" title="${e.nome||''}">${nome}</td>
+      <td class="hcell">
+        <div class="hcell-inner" style="background:${opt.bg};color:${opt.color}">${opt.lbl}</div>
+        <select data-uf="${e.uf}" data-mes="${mes}" data-field="${activeCat}" onchange="onHistCellChange(this)">${optsList}</select>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function onHistCellChange(sel) {
+  const {uf, mes, field} = sel.dataset;
+  setHistCell(uf, mes, field, sel.value);
+  // Update the visual cell immediately
+  const cfg = HIST_CAT_CFG[activeCat];
+  const opt = cfg.opts.find(o=>o.val===sel.value) || cfg.opts[cfg.opts.length-1];
+  const inner = sel.parentElement.querySelector('.hcell-inner');
+  inner.style.background = opt.bg;
+  inner.style.color = opt.color;
+  inner.textContent = opt.lbl;
+}
+
+function deleteHistMes(mes) {
+  if (!confirm(`Excluir todos os registros do mês ${mes}?`)) return;
+  HISTORICO = HISTORICO.filter(r=>r.mes!==mes);
+  saveHistorico();
+  voltarMeses();
+  updateChartFromHistorico();
+}
+
+function scoreFromRow(r) {
+  let s = 0;
+  if(r.cnpj==='ativo') s++;
+  if(r.resp_com) s++;
+  if(r.cbth_ev_logo==='sim') s++;
+  if(r.cbth_atleta==='sim') s++;
+  if(r.cbth_palestra==='sim') s++;
+  if(r.cbth_start==='sim') s++;
+  if(r.ig_status==='ativo'||r.ig_status==='inconstante') s++;
+  if(r.div==='media'||r.div==='alta') s++;
+  if(r.marca==='ativa') s++;
+  if(r.inclusao==='acoes') s++;
+  if(r.banco_jog==='sim') s++;
+  return s;
+}
+
+function updateChartFromHistorico() {
+  if (!HISTORICO.length) return;
+  const months = [...new Set(HISTORICO.map(r=>r.mes))].sort();
+  if (months.length < 2) return;
+  const moNames = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun',
+    '07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
+  const labels = months.map(m => { const [y,mo]=m.split('-'); return `${moNames[mo]||mo}/${y.slice(2)}`; });
+  const newChartData = {
+    destaque: { datasets: [
+      {label:'Avançando (≥60%)', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>=7).length), color:'#6B7280'},
+      {label:'Iniciando',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>0&&scoreFromRow(r)<7).length), color:'#CBD5E0'},
+      {label:'Sem dados',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)===0).length), color:'#F1F4F8'},
+    ]},
+    gestao: { datasets: [
+      {label:'CNPJ Ativo',    data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.cnpj==='ativo').length), color:'#1D4ED8'},
+      {label:'Regularizando', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.cnpj==='regularizando').length), color:'#60A5FA'},
+      {label:'Inativo',       data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.cnpj==='inativo').length), color:'#BFDBFE'},
+    ]},
+    cbth: { datasets: [
+      {label:'Todas 4', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&[r.cbth_ev_logo,r.cbth_atleta,r.cbth_palestra,r.cbth_start].every(v=>v==='sim')).length), color:'#15803D'},
+      {label:'3 ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&[r.cbth_ev_logo,r.cbth_atleta,r.cbth_palestra,r.cbth_start].filter(v=>v==='sim').length===3).length), color:'#16A34A'},
+      {label:'1–2',     data: months.map(m => HISTORICO.filter(r=>r.mes===m&&[r.cbth_ev_logo,r.cbth_atleta,r.cbth_palestra,r.cbth_start].filter(v=>v==='sim').length<3&&[r.cbth_ev_logo,r.cbth_atleta,r.cbth_palestra,r.cbth_start].some(v=>v==='sim')).length), color:'#4ADE80'},
+    ]},
+    digital: { datasets: [
+      {label:'IG Ativo',       data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.ig_status==='ativo').length), color:'#6B21A8'},
+      {label:'IG Inconstante', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.ig_status==='inconstante').length), color:'#A855F7'},
+      {label:'IG Inativo',     data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.ig_status==='inativo').length), color:'#D8B4FE'},
+    ]},
+    diversidade: { datasets: [
+      {label:'Com ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.inclusao==='acoes').length), color:'#EAB308'},
+      {label:'Sem ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.inclusao==='sem_acoes').length), color:'#FEF08A'},
+    ]},
+    banco: { datasets: [
+      {label:'Alimentando',  data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.banco_jog==='sim').length), color:'#78350F'},
+      {label:'Não aliment.', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.banco_jog!=='sim').length), color:'#CBD5E0'},
+    ]},
+  };
+  Object.assign(CHART_DATA, newChartData);
+  MONTHS.length = 0; labels.forEach(l=>MONTHS.push(l));
+  renderProgressionChart(activeViz);
+}
+
+function initHistorico() {
+  const inp = document.getElementById('hist-new-month');
+  if (inp) inp.value = new Date().toISOString().slice(0,7);
+  activeMatrixMes = null;
+  document.getElementById('hist-view-months').style.display = 'flex';
+  document.getElementById('hist-view-matrix-bar').style.display = 'none';
+  document.getElementById('hist-legend-bar').style.display = 'none';
+  document.getElementById('hist-content-months').style.display = '';
+  document.getElementById('hist-content-matrix').style.display = 'none';
+  setHistCat('cnpj');
+  renderMonthCards();
+}
+
+
+
+</script>
+</body>
 </html>
