@@ -933,26 +933,31 @@ function renderMap() {
       emojiLayer.appendChild(span);
     });
   } else if (activeViz === 'destaque') {
-    // Medal emojis ranked by score — top 3 get metallic state fills
-    const ranked = [...ESTADOS]
+    // Medal emojis ranked by score — only when strictly unique at rank 1/2/3
+    const mapRanked = [...ESTADOS]
       .filter(e => e.nome && CENTROIDS[e.uf])
       .map(e => ({...e, score: VIZ.destaque.getScore(e)}))
       .sort((a,b) => b.score - a.score);
 
-    // Only award map medal if score is strictly unique at that position
-    function mapHasMedal(i) {
-      if (i >= ranked.length) return false;
-      const s = ranked[i].score;
-      if (s === 0) return false;
-      const prevOk = i === 0 || ranked[i-1].score > s;
-      const nextOk = i >= ranked.length-1 || s > ranked[i+1].score;
-      return prevOk && nextOk;
+    function mapCompRank(i) {
+      let pos = 1;
+      for (let j = 0; j < i; j++) {
+        if (mapRanked[j].score > mapRanked[i].score) pos++;
+      }
+      return pos;
     }
+    function mapMedalFed(rank) {
+      const feds = mapRanked.filter((e,i) => mapCompRank(i) === rank);
+      return (feds.length === 1 && feds[0].score > 0) ? feds[0] : null;
+    }
+    const mapGold   = mapMedalFed(1);
+    const mapSilver = mapMedalFed(2);
+    const mapBronze = mapMedalFed(3);
 
     const medalColors = [
-      { emoji:'🥇', fill:'url(#grad-ouro)',   solidFill:'#854D0E', hex:'#C8960C' },
-      { emoji:'🥈', fill:'url(#grad-prata)',  solidFill:'#166534', hex:'#A0A0A0' },
-      { emoji:'🥉', fill:'url(#grad-bronze)', solidFill:'#166534', hex:'#A0522D' },
+      { fed: mapGold,   emoji:'🥇', fill:'url(#grad-ouro)',   hex:'#C8960C' },
+      { fed: mapSilver, emoji:'🥈', fill:'url(#grad-prata)',  hex:'#A0A0A0' },
+      { fed: mapBronze, emoji:'🥉', fill:'url(#grad-bronze)', hex:'#A0522D' },
     ];
 
     // Inject SVG defs for metallic gradients
@@ -984,20 +989,18 @@ function renderMap() {
       document.getElementById('brazil-svg').prepend(defsEl);
     }
 
-    ranked.slice(0,3).forEach((e,i) => {
-      if (!mapHasMedal(i)) return; // skip if tied
-      const med = medalColors[i];
-      // Color the state path with metallic gradient
-      const path = document.querySelector(`.st[data-uf="${e.uf}"]`);
+    medalColors.forEach(({fed, emoji, fill}) => {
+      if (!fed) return; // no clear winner at this rank
+      const path = document.querySelector(`.st[data-uf="${fed.uf}"]`);
       if (path) {
-        path.style.fill = med.fill;
+        path.style.fill = fill;
         path.style.stroke = '#1a1a1a';
       }
-      // Place emoji
-      const ct = CENTROIDS[e.uf];
+      const ct = CENTROIDS[fed.uf];
+      if (!ct) return;
       const span = document.createElement('span');
       span.style.cssText = `position:absolute;left:${ct.x*scX-12}px;top:${ct.y*scY-12}px;font-size:20px;line-height:1;pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))`;
-      span.textContent = med.emoji;
+      span.textContent = emoji;
       emojiLayer.appendChild(span);
     });
   }
@@ -1663,24 +1666,49 @@ function renderDestaqueRanking() {
     .map(e => ({...e, score: VIZ.destaque.getScore(e)}))
     .sort((a,b) => b.score - a.score);
 
+  // Only federations with a name participate in ranking
   const ranked = all27.filter(e => e.nome);
 
-  // Medal only when score is strictly unique at that position (no ties)
-  function hasMedal(i) {
-    if (i >= ranked.length) return false;
-    const s = ranked[i].score;
-    if (s === 0) return false;
-    const prevOk = i === 0 || ranked[i-1].score > s;
-    const nextOk = i >= ranked.length-1 || s > ranked[i+1].score;
-    return prevOk && nextOk;
+  // Competition rank: tied scores share the same rank number (e.g. 15 tied at 1/10 → all "1º")
+  // Returns the 1-based rank for a federation in `ranked` by index
+  function compRank(i) {
+    if (i < 0 || i >= ranked.length) return null;
+    let pos = 1;
+    for (let j = 0; j < i; j++) {
+      if (ranked[j].score > ranked[i].score) pos++;
+    }
+    return pos;
   }
 
-  const medal = (i) => hasMedal(i) ? (i===0?'🥇':i===1?'🥈':'🥉') : '';
+  // Count how many share this score among ranked feds
+  function countAtScore(score) {
+    return ranked.filter(e => e.score === score).length;
+  }
 
-  const medalStyle = (i) => {
-    if(i===0 && hasMedal(0)) return {bg:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',border:'#F5C842',color:'#92400E',label:'Ouro'};
-    if(i===1 && hasMedal(1)) return {bg:'linear-gradient(135deg,#F0F4FF,#DDE6F5)',border:'#A8BDD8',color:'#2C4A6E',label:'Prata'};
-    if(i===2 && hasMedal(2)) return {bg:'linear-gradient(135deg,#FDF6EE,#F5E6D0)',border:'#CD7F32',color:'#7C3400',label:'Bronze'};
+  // A medal position is valid only if exactly ONE federation holds that rank
+  function medalRank(rank) {
+    // rank 1, 2, or 3 — only award if exactly one fed at that position
+    const feds = ranked.filter((e, i) => compRank(i) === rank);
+    if (feds.length !== 1) return null;
+    if (feds[0].score === 0) return null;
+    return feds[0];
+  }
+
+  const gold   = medalRank(1);
+  const silver = medalRank(2);
+  const bronze = medalRank(3);
+
+  const medalEmoji = (fed) => {
+    if (gold   && fed.uf === gold.uf)   return '🥇';
+    if (silver && fed.uf === silver.uf) return '🥈';
+    if (bronze && fed.uf === bronze.uf) return '🥉';
+    return '';
+  };
+
+  const medalStyle = (fed) => {
+    if (gold   && fed.uf === gold.uf)   return {bg:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',border:'#F5C842',color:'#92400E',label:'Ouro'};
+    if (silver && fed.uf === silver.uf) return {bg:'linear-gradient(135deg,#F0F4FF,#DDE6F5)',border:'#A8BDD8',color:'#2C4A6E',label:'Prata'};
+    if (bronze && fed.uf === bronze.uf) return {bg:'linear-gradient(135deg,#FDF6EE,#F5E6D0)',border:'#CD7F32',color:'#7C3400',label:'Bronze'};
     return {bg:'#FAFBFC',border:'#EEF0F3',color:'var(--txt2)',label:''};
   };
 
@@ -1690,6 +1718,11 @@ function renderDestaqueRanking() {
     return   {color:'#F1F4F8'};
   };
 
+  // Top 5: show top 5 distinct score groups (if tied, show all in that group up to 5)
+  // Actually just show top 5 ranked feds but with correct tied position numbers
+  const top5 = ranked.slice(0, 5);
+  // Check if all top 5 have same score (or all tied at top) — show "(empate)" hint
+  const top5Scores = [...new Set(top5.map(f => f.score))];
 
   const container = document.getElementById('destaque-content');
   container.innerHTML = `
@@ -1697,17 +1730,20 @@ function renderDestaqueRanking() {
       <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3)">🏆 Top 5 · Federação Destaque</div>
     </div>
     <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px">
-      ${ranked.slice(0,5).map((fed,i) => {
-        const ms = medalStyle(i);
+      ${top5.map((fed, i) => {
+        const cr = compRank(i);
+        const ms = medalStyle(fed);
+        const em = medalEmoji(fed);
         const pct = Math.round(fed.score/MAX*100);
-        const isMedal = hasMedal(i);
+        const tied = countAtScore(fed.score) > 1;
         return `
         <div style="display:flex;align-items:center;gap:9px;background:${ms.bg};border:1.5px solid ${ms.border};border-radius:8px;padding:8px 10px">
-          <span style="font-size:${isMedal?'18px':'12px'};min-width:20px;text-align:center;line-height:1">${medal(i)||`<span style='font-family:"DM Mono",monospace;font-size:11px;font-weight:700;color:var(--txt3)'>${i+1}</span>`}</span>
+          <span style="font-size:${em?'18px':'12px'};min-width:20px;text-align:center;line-height:1">${em||`<span style='font-family:"DM Mono",monospace;font-size:11px;font-weight:700;color:var(--txt3)'>${cr}º</span>`}</span>
           <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:baseline;gap:5px">
+            <div style="display:flex;align-items:baseline;gap:5px;flex-wrap:wrap">
               <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--txt)">${fed.uf}</span>
-              ${isMedal && ms.label?`<span style="font-size:9px;font-weight:700;color:${ms.color};background:${ms.border}33;padding:1px 5px;border-radius:6px">${ms.label}</span>`:''}
+              ${ms.label?`<span style="font-size:9px;font-weight:700;color:${ms.color};background:${ms.border}33;padding:1px 5px;border-radius:6px">${ms.label}</span>`:''}
+              ${tied?`<span style="font-size:9px;color:var(--txt3);font-style:italic">empate</span>`:''}
             </div>
             <div style="font-size:10px;color:var(--txt3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">${(fed.nome||'').replace(/^Fed\.\s*/i,'').replace(/^Federação\s*/i,'')}</div>
           </div>
@@ -1724,14 +1760,17 @@ function renderDestaqueRanking() {
       <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3)">📋 Ranking Completo · 27 Estados</div>
     </div>
     <div>
-      ${all27.map((e) => {
+      ${all27.map((e, globalIdx) => {
         const t = tier(e.score);
         const pct = Math.round(e.score/MAX*100);
-        const rankedPos = ranked.indexOf(e);
-        const posLabel = e.nome
-          ? (hasMedal(rankedPos) ? medal(rankedPos) : `<span style='font-family:"DM Mono",monospace;font-size:10px;color:var(--txt3);font-weight:700'>${rankedPos+1}º</span>`)
+        const ri = ranked.indexOf(e);
+        const cr = ri >= 0 ? compRank(ri) : null;
+        const em = medalEmoji(e);
+        const tied = e.nome && countAtScore(e.score) > 1;
+        const posLabel = e.nome && cr !== null
+          ? (em || `<span style='font-family:"DM Mono",monospace;font-size:10px;color:var(--txt3);font-weight:700'>${cr}º${tied?'=':''}</span>`)
           : '<span style="color:var(--txt3);font-size:10px">—</span>';
-        const rowBg = (rankedPos===0&&hasMedal(0))?'#FFFBEB':(rankedPos===1&&hasMedal(1))?'#F0F4FF':(rankedPos===2&&hasMedal(2))?'#FDF6EE':'var(--surface)';
+        const rowBg = (gold&&e.uf===gold.uf)?'#FFFBEB':(silver&&e.uf===silver.uf)?'#F0F4FF':(bronze&&e.uf===bronze.uf)?'#FDF6EE':'var(--surface)';
         return `
         <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:${rowBg}">
           <span style="font-size:11px;min-width:20px;text-align:center;line-height:1">${posLabel}</span>
