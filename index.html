@@ -485,7 +485,7 @@ tbody tr:last-child td{border-bottom:none}
         <span id="hist-matrix-title" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--txt)"></span>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-left:8px" id="hist-cat-btns">
           <button id="hist-cat-cnpj"      class="hist-cat-btn active" onclick="setHistCat('cnpj')"          style="background:#1D4ED8;color:#fff">CNPJ</button>
-          <button id="hist-cat-ig"        class="hist-cat-btn" onclick="setHistCat('ig_status')"            >Status IG</button>
+          <button id="hist-cat-ig_status"   class="hist-cat-btn" onclick="setHistCat('ig_status')"            >Status IG</button>
           <button id="hist-cat-div"       class="hist-cat-btn" onclick="setHistCat('div')"                  >Divulgação</button>
           <button id="hist-cat-marca"     class="hist-cat-btn" onclick="setHistCat('marca')"                >Marca CBTH</button>
           <button id="hist-cat-inclusao"  class="hist-cat-btn" onclick="setHistCat('inclusao')"             >Inclusão</button>
@@ -676,11 +676,10 @@ const VIZ = {
     label:'Federação Destaque',
     getScore(e){
       let s = 0;
-      // Gestão & Esportividade — 1pt cada
+      // Gestão & Esportividade — 1pt
       if(e.cnpj==='ativo')      s+=1;
-      if(e.resp_com)             s+=1;
       // CBTH pelo Brasil — 1pt cada (4 critérios)
-      if(e.cbth_ev_logo==='sim') { s+=1; if(e.cbth_ev_count && parseInt(e.cbth_ev_count)>1) s+= Math.min(parseInt(e.cbth_ev_count)-1, 2); } // bonus up to 2 extra for multiple events
+      if(e.cbth_ev_logo==='sim') s+=1;
       if(e.cbth_atleta==='sim')  s+=1;
       if(e.cbth_palestra==='sim')s+=1;
       if(e.cbth_start==='sim')   s+=1;
@@ -692,12 +691,12 @@ const VIZ = {
       if(e.inclusao==='acoes')   s+=1;
       // Banco de Jogadores — 1pt
       if(e.banco_jog==='sim')    s+=1;
-      return s; // max = 11
+      return s; // max = 10
     },
     getColor(e){
       const s = this.getScore(e);
-      // ≥ 60% = 6.6 pts → arredondamos para s >= 7 como limiar verde
-      if(s >= 7)  return '#6B7280'; // avançando — cinza escuro
+      // ≥ 60% = 6.0 pts → arredondamos para s >= 6 como limiar verde
+      if(s >= 6)  return '#6B7280'; // avançando — cinza escuro
       if(s > 0)   return '#CBD5E0'; // iniciando — cinza médio
       return '#F1F4F8';              // sem dados — cinza clarinho
     },
@@ -711,10 +710,10 @@ const VIZ = {
     ],
     tooltip(e){
       const s = VIZ.destaque.getScore(e);
-      const pct = Math.round(s/11*100);
+      const pct = Math.round(s/10*100);
       // Medal based on ranking, not score threshold — tooltip just shows score
       return[
-        {key:'Score',       val:`${s}/11 pontos (${pct}%)`, ok:pct>=60},
+        {key:'Score',       val:`${s}/10 pontos (${pct}%)`, ok:pct>=60},
         {key:'CNPJ',        val:e.cnpj==='ativo'?'Ativo':e.cnpj||'—',          ok:e.cnpj==='ativo'},
         {key:'Resp. Com.',  val:e.resp_com?'✓ Designado':'—',                   ok:!!e.resp_com},
         {key:'CBTH ações',  val:[e.cbth_ev_logo,e.cbth_atleta,e.cbth_palestra,e.cbth_start].filter(v=>v==='sim').length+'/4', ok:true},
@@ -1647,7 +1646,7 @@ Retorne SOMENTE um JSON válido sem markdown:
 // FEDERAÇÃO DESTAQUE RANKING
 // ══════════════════════════════════════════════════
 function renderDestaqueRanking() {
-  const MAX = 11;
+  const MAX = 10;
 
   const all27 = ESTADOS
     .map(e => ({...e, score: VIZ.destaque.getScore(e)}))
@@ -1665,7 +1664,7 @@ function renderDestaqueRanking() {
   };
 
   const tier = (s) => {
-    if(s>=7) return {color:'#6B7280'};
+    if(s>=6) return {color:'#6B7280'};
     if(s>0)  return {color:'#CBD5E0'};
     return   {color:'#F1F4F8'};
   };
@@ -1894,6 +1893,7 @@ async function ensureBinPublic() {
 
 loadData().then(() => {
   ensureBinPublic();
+  syncEstadosFromHistorico();
   renderTable();
   initHistorico();
   setTimeout(()=>{
@@ -2230,6 +2230,21 @@ function getHistCell(uf, mes) {
   return HISTORICO.find(r=>r.uf===uf && r.mes===mes) || null;
 }
 
+function syncEstadosFromHistorico() {
+  const months = [...new Set(HISTORICO.map(r=>r.mes))].sort();
+  if (!months.length) return;
+  const latestMonth = months[months.length - 1];
+  const HIST_FIELDS = ['cnpj','ig_status','div','marca','inclusao','cbth_ev_logo','cbth_atleta','cbth_palestra','cbth_start','banco_jog'];
+  HISTORICO.filter(r=>r.mes===latestMonth).forEach(row => {
+    const estado = ESTADOS.find(e=>e.uf===row.uf);
+    if (estado) {
+      HIST_FIELDS.forEach(field => {
+        if (row[field] !== undefined && row[field] !== '') estado[field] = row[field];
+      });
+    }
+  });
+}
+
 function setHistCell(uf, mes, field, val) {
   let row = HISTORICO.find(r=>r.uf===uf && r.mes===mes);
   if (!row) {
@@ -2240,6 +2255,9 @@ function setHistCell(uf, mes, field, val) {
     HISTORICO.push(row);
   }
   row[field] = val;
+  syncEstadosFromHistorico();
+  renderMap();
+  renderDestaqueRanking();
   saveHistorico();
   updateChartFromHistorico();
 }
@@ -2275,6 +2293,9 @@ function snapshotMesAtual() {
     banco_jog:e.banco_jog||'nao'
   }));
   saveHistorico();
+  syncEstadosFromHistorico();
+  renderMap();
+  renderDestaqueRanking();
   abrirMes(m);
   updateChartFromHistorico();
 }
@@ -2346,7 +2367,6 @@ function deleteHistMes(mes) {
 function scoreFromRow(r) {
   let s = 0;
   if(r.cnpj==='ativo') s++;
-  if(r.resp_com) s++;
   if(r.cbth_ev_logo==='sim') s++;
   if(r.cbth_atleta==='sim') s++;
   if(r.cbth_palestra==='sim') s++;
@@ -2368,8 +2388,8 @@ function updateChartFromHistorico() {
   const labels = months.map(m => { const [y,mo]=m.split('-'); return `${moNames[mo]||mo}/${y.slice(2)}`; });
   const newChartData = {
     destaque: { datasets: [
-      {label:'Avançando (≥60%)', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>=7).length), color:'#6B7280'},
-      {label:'Iniciando',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>0&&scoreFromRow(r)<7).length), color:'#CBD5E0'},
+      {label:'Avançando (≥60%)', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>=6).length), color:'#6B7280'},
+      {label:'Iniciando',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>0&&scoreFromRow(r)<6).length), color:'#CBD5E0'},
       {label:'Sem dados',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)===0).length), color:'#F1F4F8'},
     ]},
     gestao: { datasets: [
