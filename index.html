@@ -249,7 +249,7 @@ tbody tr:last-child td{border-bottom:none}
           <div class="viz-tab" data-viz="gestao"><span class="vt-dot" style="background:#1D4ED8"></span>Gestão &amp; Esportividade</div>
           <div class="viz-tab" data-viz="cbth"><span class="vt-dot" style="background:#16A34A"></span>CBTH pelo Brasil</div>
           <div class="viz-tab" data-viz="digital"><span class="vt-dot" style="background:#6B21A8"></span>Presença Digital</div>
-          <div class="viz-tab" data-viz="diversidade"><span class="vt-dot" style="background:#EAB308"></span>Diversidade &amp; Inclusão</div>
+          <div class="viz-tab" data-viz="diversidade"><span class="vt-dot" style="background:#EA580C"></span>Diversidade &amp; Inclusão</div>
           <div class="viz-tab" data-viz="banco"><span class="vt-dot" style="background:#78350F"></span>Banco de Dados</div>
         </div>
       </div>
@@ -695,17 +695,17 @@ const VIZ = {
     },
     getColor(e){
       const s = this.getScore(e);
-      // ≥ 60% = 6.0 pts → arredondamos para s >= 6 como limiar verde
-      if(s >= 6)  return '#6B7280'; // avançando — cinza escuro
-      if(s > 0)   return '#CBD5E0'; // iniciando — cinza médio
-      return '#F1F4F8';              // sem dados — cinza clarinho
+      // ≥ 60% = 6.0 pts → arredondamos para s >= 6 como limiar
+      if(s >= 6)  return '#FACC15'; // avançando — amarelo vibrante
+      if(s > 0)   return '#FEF9C3'; // iniciando — amarelo bem clarinho
+      return '#F1F4F8';              // sem dados — cinza clarinho (mantido)
     },
     legend:[
       {color:'linear-gradient(135deg,#F5C842,#C8960C)', label:'🥇 País Ouro (top 1)', isGold:true},
       {color:'linear-gradient(135deg,#E8E8E8,#A8A8A8)', label:'🥈 País Prata (top 2)', isSilver:true},
       {color:'linear-gradient(135deg,#CD7F32,#8B4513)', label:'🥉 País Bronze (top 3)', isBronze:true},
-      {color:'#6B7280', label:'Avançando (≥ 60%)'},
-      {color:'#CBD5E0', label:'Iniciando'},
+      {color:'#FACC15', label:'Avançando (≥ 60%)'},
+      {color:'#FEF9C3', label:'Iniciando'},
       {color:'#F1F4F8', label:'Sem dados'},
     ],
     tooltip(e){
@@ -765,13 +765,13 @@ const VIZ = {
   diversidade:{
     label:'Diversidade & Inclusão',
     getColor(e){
-      if(e.inclusao==='acoes')     return '#EAB308'; // amarelo médio
-      if(e.inclusao==='sem_acoes') return '#FEF9C3'; // amarelo muito claro
+      if(e.inclusao==='acoes')     return '#EA580C'; // laranja forte
+      if(e.inclusao==='sem_acoes') return '#FED7AA'; // laranja claro
       return '#E5E7EB';                               // não avaliado
     },
     legend:[
-      {color:'#EAB308', label:'Ações Inclusivas'},
-      {color:'#FEF9C3', label:'Sem ações registradas'},
+      {color:'#EA580C', label:'Ações Inclusivas'},
+      {color:'#FED7AA', label:'Sem ações registradas'},
       {color:'#E5E7EB', label:'Não avaliado'},
     ],
     tooltip(e){return[
@@ -1349,17 +1349,17 @@ function renderDiversidadeBreakdown() {
   const naoAval     = total - comAcoes - semAcoes;
 
   const rows = [
-    {val:'acoes',     label:'Ações Inclusivas',       color:'#EAB308', list: ESTADOS.filter(e=>e.inclusao==='acoes')},
-    {val:'sem_acoes', label:'Sem ações registradas',  color:'#FEF9C3', list: ESTADOS.filter(e=>e.inclusao==='sem_acoes')},
+    {val:'acoes',     label:'Ações Inclusivas',       color:'#EA580C', list: ESTADOS.filter(e=>e.inclusao==='acoes')},
+    {val:'sem_acoes', label:'Sem ações registradas',  color:'#FED7AA', list: ESTADOS.filter(e=>e.inclusao==='sem_acoes')},
     {val:'',          label:'Não avaliado',            color:'#E5E7EB', list: ESTADOS.filter(e=>!e.inclusao)},
   ];
 
   const el = document.getElementById('div-breakdown');
   el.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:12px">
-      <div style="flex:1;background:#FEFCE8;border:1px solid #FEF08A;border-radius:8px;padding:10px 12px;text-align:center">
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#EAB308">${comAcoes}</div>
-        <div style="font-size:10px;color:#92400E;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Com ações</div>
+      <div style="flex:1;background:#FFF7ED;border:1px solid #FDBA74;border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#EA580C">${comAcoes}</div>
+        <div style="font-size:10px;color:#9A3412;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Com ações</div>
       </div>
       <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
         <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--txt3)">${semAcoes}</div>
@@ -1463,7 +1463,7 @@ Retorne SOMENTE um JSON válido sem markdown:
     ESTADOS[idx].inclusao_obs = p.obs||'';
     saveData(); renderMap(); renderDiversidadeBreakdown();
 
-    const cor = p.inclusao==='acoes' ? '#92400E' : '#9CA3AF';
+    const cor = p.inclusao==='acoes' ? '#9A3412' : '#9CA3AF';
     const label = p.inclusao==='acoes' ? 'Ações Inclusivas' : 'Sem ações registradas';
     const acoesHtml = (p.acoes_encontradas||[]).length > 0
       ? '<ul style="margin:4px 0 0 12px;padding:0">' + p.acoes_encontradas.map(a=>`<li style="margin-bottom:2px">${a}</li>`).join('') + '</ul>'
@@ -1472,7 +1472,7 @@ Retorne SOMENTE um JSON válido sem markdown:
     result.innerHTML = `
       <div style="font-weight:600;color:var(--txt);margin-bottom:6px">${uf} · Análise de Inclusão</div>
       <div style="margin-bottom:6px">
-        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:${p.inclusao==='acoes'?'#FEF3C7':'#F3F4F6'};color:${cor}">
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:${p.inclusao==='acoes'?'#FFF7ED':'#F3F4F6'};color:${cor}">
           ${p.inclusao==='acoes'?'✦':''} ${label}${p.nivel?' · nível '+p.nivel:''}
         </span>
       </div>
@@ -1975,8 +1975,8 @@ const MONTHS = ['Set','Out','Nov','Dez','Jan','Fev','Mar'];
 const CHART_DATA = {
   destaque: {
     datasets: [
-      {label:'Avançando (≥60%)', data:[4,5,6,7,8,9,11], color:'#6B7280'},
-      {label:'Iniciando',        data:[8,9,10,10,10,9,9], color:'#CBD5E0'},
+      {label:'Avançando (≥60%)', data:[4,5,6,7,8,9,11], color:'#FACC15'},
+      {label:'Iniciando',        data:[8,9,10,10,10,9,9], color:'#FEF9C3'},
       {label:'Sem dados',        data:[15,13,11,10,9,9,7], color:'#F1F4F8'},
     ]
   },
@@ -2004,9 +2004,9 @@ const CHART_DATA = {
   },
   diversidade: {
     datasets: [
-      {label:'Com ações',   data:[8,9,10,11,12,13,14], color:'#EAB308'},
-      {label:'Sem ações',   data:[10,10,9,9,8,8,8],    color:'#FEF08A'},
-      {label:'Não avaliado',data:[9,8,8,7,7,6,5],      color:'#CBD5E0'},
+      {label:'Com ações',   data:[8,9,10,11,12,13,14], color:'#EA580C'},
+      {label:'Sem ações',   data:[10,10,9,9,8,8,8],    color:'#FED7AA'},
+      {label:'Não avaliado',data:[9,8,8,7,7,6,5],      color:'#E5E7EB'},
     ]
   },
   banco: {
@@ -2245,25 +2245,45 @@ function renderMonthCards() {
   cards.style.display = '';
   empty.style.display = 'none';
 
+  // All category keys for overall progress calculation
+  const ALL_CAT_KEYS = ['cnpj','ig_status','div','marca','inclusao','cbth_ev_logo','cbth_atleta','cbth_palestra','cbth_start','banco_jog'];
+
   const curMes = new Date().toISOString().slice(0, 7);
   cards.innerHTML = [...meses].reverse().map(m => {
     const [y, mo] = m.split('-');
     const rows = HISTORICO.filter(r => r.mes === m);
     const total = rows.length;
-    const filled = rows.filter(r => r[activeCat] && r[activeCat] !== '').length;
-    const pct = total ? Math.round(filled / total * 100) : 0;
+    
+    // Calculate overall progress: count filled cells across ALL categories
+    let totalCells = 0;
+    let filledCells = 0;
+    rows.forEach(r => {
+      ALL_CAT_KEYS.forEach(cat => {
+        totalCells++;
+        if (r[cat] && r[cat] !== '') filledCells++;
+      });
+    });
+    const overallPct = totalCells ? Math.round(filledCells / totalCells * 100) : 0;
+    
+    // Count how many categories have at least some data
+    const catsFilled = ALL_CAT_KEYS.filter(cat => rows.some(r => r[cat] && r[cat] !== '')).length;
+    
+    // Also show the active category progress for the subtitle
+    const activeFilled = rows.filter(r => r[activeCat] && r[activeCat] !== '').length;
+    const activePct = total ? Math.round(activeFilled / total * 100) : 0;
+    
     const isCur = m === curMes;
     return `
     <div onclick="abrirMes('${m}')" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1.5px solid ${isCur ? 'var(--txt)' : 'var(--border)'};border-radius:10px;padding:14px 20px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
       <div style="font-size:28px">📅</div>
       <div style="flex:1">
         <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--txt)">${MO_NAMES[mo] || mo} ${y}${isCur ? ' <span style="font-size:10px;background:var(--txt);color:#fff;padding:1px 7px;border-radius:10px;margin-left:6px">Atual</span>' : ''}</div>
-        <div style="font-size:11px;color:var(--txt3);margin-top:3px">${total} estados registrados · ${filled} com dados em <b>${HIST_CAT_CFG[activeCat]?.label || activeCat}</b></div>
+        <div style="font-size:11px;color:var(--txt3);margin-top:3px">${total} estados registrados · ${catsFilled}/${ALL_CAT_KEYS.length} categorias com dados</div>
         <div style="width:200px;height:4px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:6px">
-          <div style="height:100%;background:${HIST_CAT_CFG[activeCat]?.btnColor || '#16A34A'};width:${pct}%;border-radius:99px;transition:width .4s"></div>
+          <div style="height:100%;background:linear-gradient(90deg, #1D4ED8 0%, #16A34A 100%);width:${overallPct}%;border-radius:99px;transition:width .4s"></div>
         </div>
       </div>
-      <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--txt2)">${pct}%</div>
+      <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--txt2)">${overallPct}%</div>
       <div style="color:var(--txt3);font-size:16px">›</div>
     </div>`;
   }).join('');
@@ -2448,8 +2468,8 @@ function updateChartFromHistorico() {
   const labels = months.map(m => { const [y,mo]=m.split('-'); return `${moNames[mo]||mo}/${y.slice(2)}`; });
   const newChartData = {
     destaque: { datasets: [
-      {label:'Avançando (≥60%)', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>=6).length), color:'#6B7280'},
-      {label:'Iniciando',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>0&&scoreFromRow(r)<6).length), color:'#CBD5E0'},
+      {label:'Avançando (≥60%)', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>=6).length), color:'#FACC15'},
+      {label:'Iniciando',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>0&&scoreFromRow(r)<6).length), color:'#FEF9C3'},
       {label:'Sem dados',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)===0).length), color:'#F1F4F8'},
     ]},
     gestao: { datasets: [
@@ -2468,8 +2488,8 @@ function updateChartFromHistorico() {
       {label:'IG Inativo',     data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.ig_status==='inativo').length), color:'#D8B4FE'},
     ]},
     diversidade: { datasets: [
-      {label:'Com ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.inclusao==='acoes').length), color:'#EAB308'},
-      {label:'Sem ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.inclusao==='sem_acoes').length), color:'#FEF08A'},
+      {label:'Com ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.inclusao==='acoes').length), color:'#EA580C'},
+      {label:'Sem ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.inclusao==='sem_acoes').length), color:'#FED7AA'},
     ]},
     banco: { datasets: [
       {label:'Alimentando',  data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.banco_jog==='sim').length), color:'#78350F'},
