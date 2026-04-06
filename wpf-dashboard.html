@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>WPF Global Country Research — Dashboard Estratégico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+:root {
+  --muted: #6b6b72;
+  --border: #e0e0e6;
+  --card-bg: #f4f4f7;
+  --card-bg-strong: #eeecf5;
+  --accent: #7c5cbf;
+  --accent-dark: #4e3880;
+  --accent-light: #ede8f8;
+  --high: #9b2335;
+  --medium: #b5651d;
+  --low: #3d6b4f;
+}
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a { color: #185FA5; }
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #f4f4f7;
+  border-right: 1px solid #e0e0e6;
+  color: #444;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand {
+  padding: 0 16px 20px;
+  border-bottom: 1px solid #e0e0e6;
+  margin-bottom: 8px;
+}
+
+.brand h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--accent-dark);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.brand p {
+  font-size: 11px;
+  color: #999;
+  margin-top: 6px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.country-selector-wrap {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e6;
+  margin-bottom: 12px;
+}
+
+.country-selector-wrap label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #999;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.country-input-wrap {
+  position: relative;
+}
+
+#countryInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e0e0e6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+#countryInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#countryInput::placeholder {
+  color: #bbb;
+}
+
+.search-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-btn:hover {
+  background: var(--accent-dark);
+}
+
+.search-btn:disabled {
+  background: #ccc;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.nav-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #bbb;
+  padding: 12px 16px 8px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  counter-reset: navindex;
+}
+
+.nav a {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  line-height: 1.3;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav a .nav-num {
+  font-size: 10px;
+  color: #bbb;
+  font-weight: 600;
+  min-width: 18px;
+}
+
+.nav a:hover { background: var(--accent-light); color: #1a1a1a; }
+.nav a.active { background: var(--accent-light); color: var(--accent-dark); border-left-color: var(--accent); font-weight: 600; }
+.nav a.active .nav-num { color: var(--accent); }
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 48px 60px;
+  background: #ffffff;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+}
+
+.loading-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #eee;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.loading-progress {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+/* Sections */
+.section {
+  margin-bottom: 32px;
+  scroll-margin-top: 24px;
+}
+
+.section-header {
+  border-bottom: 2px solid #1a1a1a;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+}
+
+.section-header h3 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px;
+  font-weight: 400;
+  color: #1a1a1a;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.section-header p {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 6px;
+  max-width: 700px;
+}
+
+/* Cards & Grids */
+.grid-2, .grid-3, .grid-4 {
+  display: grid;
+  gap: 14px;
+}
+
+.grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.card, .stat {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+
+.card h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #1a1a1a;
+}
+
+.card p, .card li {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.6;
+}
+
+.card ul, .card ol {
+  padding-left: 16px;
+}
+
+.card li {
+  margin-bottom: 5px;
+}
+
+.stat {
+  min-width: 120px;
+}
+
+.stat small {
+  display: block;
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.stat strong {
+  display: block;
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #1a1a1a;
+  line-height: 1.1;
+}
+
+.stat span {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.tone-good { background: #f0f8f4; border-color: #c4ddd0; }
+.tone-warn { background: #fdf8ec; border-color: #e9ddbc; }
+.tone-risk { background: #fdf0f0; border-color: #ecd2d2; }
+.tone-soft { background: #f0f4fc; border-color: #d4ddee; }
+
+/* Priority badges */
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.priority-high { background: #fdecea; color: var(--high); }
+.priority-medium { background: #fdf4dc; color: var(--medium); }
+.priority-low { background: #e6f4ed; color: var(--low); }
+
+/* Pills */
+.pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #eee;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.pills-wrap {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* Hero Section */
+.hero {
+  margin-bottom: 36px;
+}
+
+.hero h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #1a1a1a;
+  line-height: 1.3;
+  border-bottom: 2px solid #1a1a1a;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  max-width: 980px;
+}
+
+.hero > p {
+  font-size: 15px;
+  color: var(--muted);
+  max-width: 900px;
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+
+/* KPI Grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kpi-grid .stat {
+  min-height: 110px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: #666;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.tab-btn:hover {
+  background: var(--accent-light);
+  color: #1a1a1a;
+}
+
+.tab-btn.active {
+  background: var(--accent-light);
+  border-color: #c4aff0;
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th {
+  background: #ececf2;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #666;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+  color: #444;
+}
+
+tr:last-child td { border-bottom: none; }
+
+/* Ranking Section */
+.ranking-table {
+  margin-top: 16px;
+}
+
+.ranking-table tr td:first-child {
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: 16px;
+  width: 50px;
+}
+
+.ranking-country {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ranking-flag {
+  font-size: 24px;
+}
+
+.ranking-name {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.ranking-score {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px;
+  color: #1a1a1a;
+}
+
+/* Source list */
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+
+.source-list a {
+  color: #185FA5;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.source-list a:hover {
+  text-decoration: underline;
+}
+
+/* Chapter visibility */
+.chapter-hidden { display: none !important; }
+.chapter-section.active-chapter { display: block !important; }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 80px 40px;
+  color: var(--muted);
+}
+
+.empty-state h3 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  font-size: 15px;
+  max-width: 500px;
+  margin: 0 auto 24px;
+  line-height: 1.7;
+}
+
+.empty-state .hint {
+  font-size: 13px;
+  color: #aaa;
+}
+
+/* Footer */
+.footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid #e8e8e4;
+  font-size: 11px;
+  color: #bbb;
+  text-align: center;
+}
+
+/* Callout */
+.callout {
+  background: var(--accent-light);
+  border: 1px solid #c4aff0;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin: 16px 0;
+}
+
+.callout p {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  padding-left: 24px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #ddd;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 20px;
+  padding-left: 24px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+}
+
+.timeline-item .year {
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.timeline-item h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+}
+
+.timeline-item p {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Partner checklist */
+.partner-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  font-size: 13px;
+  user-select: none;
+}
+.partner-check:hover { border-color: var(--accent); background: var(--accent-light); }
+.partner-check.is-partner     { border-color: #3d6b4f; background: #e6f4ed; color: #3d6b4f; }
+.partner-check.is-substitute  { border-color: #7c5cbf; background: #ede8f8; color: #7c5cbf; }
+.partner-check.not-partner    { border-color: #9b2335; background: #fdecea; color: #9b2335; }
+
+tr.row-partner     { background: #f0fbf5 !important; }
+tr.row-substitute  { background: #f5f0fc !important; }
+tr.row-not-partner { background: #fffafa !important; }
+tr.row-partner:hover     { background: #e6f8ee !important; }
+tr.row-substitute:hover  { background: #ede8f8 !important; }
+tr.row-not-partner:hover { background: #fff3f3 !important; }
+
+.partner-legend {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 12px;
+  color: #666;
+}
+.partner-legend span { display: flex; align-items: center; gap: 6px; }
+
+.coverage-bar-wrap {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.coverage-stats { display: flex; gap: 24px; flex-shrink: 0; }
+.coverage-stat { text-align: center; }
+.coverage-stat strong { display: block; font-family: 'Instrument Serif', serif; font-size: 28px; font-weight: 400; }
+.coverage-stat small { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.08em; }
+.coverage-stat.s-partner    strong { color: #3d6b4f; }
+.coverage-stat.s-substitute strong { color: #7c5cbf; }
+.coverage-stat.s-missing    strong { color: #9b2335; }
+.coverage-stat.s-total      strong { color: var(--accent-dark); }
+
+.coverage-progress { flex: 1; min-width: 200px; }
+.coverage-progress-label { font-size: 11px; color: #999; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.coverage-track { height: 10px; background: #e8e8ee; border-radius: 5px; overflow: hidden; }
+.coverage-fill { height: 100%; background: linear-gradient(90deg, #3d6b4f, #5a9e73); border-radius: 5px; transition: width 0.4s ease; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 960px) {
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 840px) {
+  .app { display: block; }
+  .sidebar {
+    position: static;
+    width: auto;
+    min-width: 0;
+    height: auto;
+  }
+  .main {
+    padding: 24px 20px 40px;
+  }
+}
+
+@media (max-width: 720px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .hero h2, .section-header h3 { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>WPF Global Research</h1>
+      <p>Dashboard Estratégico</p>
+    </div>
+    
+    <div class="country-selector-wrap">
+      <label>Pesquisar País</label>
+      <div class="country-input-wrap">
+        <input type="text" id="countryInput" placeholder="Ex: Alemanha, Japão..." autocomplete="off">
+        <button class="search-btn" id="searchBtn">GO</button>
+      </div>
+    </div>
+    
+    <div class="nav-title">Capítulos</div>
+    <nav class="nav" id="nav">
+      <a href="#inicio" class="active"><span class="nav-num">—</span>Top 50 Países</a>
+      <a href="#resumo"><span class="nav-num">00</span>Resumo Executivo</a>
+      <a href="#ranking"><span class="nav-num">01</span>Ranking do País</a>
+      <a href="#mercado"><span class="nav-num">02</span>Tamanho do Mercado</a>
+      <a href="#visao-geral"><span class="nav-num">03</span>Visão Geral</a>
+      <a href="#quadro-legal"><span class="nav-num">04</span>Quadro Legal</a>
+      <a href="#quadro-fiscal"><span class="nav-num">05</span>Quadro Fiscal</a>
+      <a href="#regulador"><span class="nav-num">06</span>Regulador</a>
+      <a href="#atores"><span class="nav-num">07</span>Atores Principais</a>
+      <a href="#linha-do-tempo"><span class="nav-num">08</span>Linha do Tempo</a>
+      <a href="#estrategia-wpf"><span class="nav-num">09</span>Estratégia WPF</a>
+      <a href="#leitura-final"><span class="nav-num">10</span>Leitura Final</a>
+      <a href="#fontes"><span class="nav-num">11</span>Fontes</a>
+    </nav>
+  </aside>
+  
+  <main class="main" id="mainContent">
+    <!-- TELA INICIAL: Top 50 Países -->
+    <section class="section chapter-section active-chapter" id="inicio">
+      <div class="hero">
+        <h2>Top 50 Member Nations — WPF Priority Index</h2>
+        <p>Ranking estratégico dos 50 mercados nacionais de poker mais relevantes para expansão da World Poker Federation. Marque cada país como parceiro (<strong>✓</strong>) ou não (<strong>✗</strong>) para visualizar sua cobertura em tempo real.</p>
+      </div>
+
+      <!-- Coverage bar -->
+      <div class="coverage-bar-wrap" id="coverageBar">
+        <div class="coverage-stats">
+          <div class="coverage-stat s-partner">
+            <strong id="cvPartner">0</strong>
+            <small>Parceiros</small>
+          </div>
+          <div class="coverage-stat s-substitute">
+            <strong id="cvSubstitute">0</strong>
+            <small>Substituição</small>
+          </div>
+          <div class="coverage-stat s-missing">
+            <strong id="cvMissing">0</strong>
+            <small>Em aberto</small>
+          </div>
+          <div class="coverage-stat s-total">
+            <strong>50</strong>
+            <small>Total</small>
+          </div>
+        </div>
+        <div class="coverage-progress">
+          <div class="coverage-progress-label">
+            <span>Cobertura WPF</span>
+            <span id="cvPct">0%</span>
+          </div>
+          <div class="coverage-track">
+            <div class="coverage-fill" id="cvFill" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="partner-legend">
+          <span><span style="width:20px;height:20px;border-radius:50%;background:#e6f4ed;border:2px solid #3d6b4f;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#3d6b4f;">✓</span> Parceiro</span>
+          <span><span style="width:20px;height:20px;border-radius:50%;background:#ede8f8;border:2px solid #7c5cbf;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#7c5cbf;">↔</span> Substituição</span>
+          <span><span style="width:20px;height:20px;border-radius:50%;background:#fdecea;border:2px solid #9b2335;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#9b2335;">✗</span> Em aberto</span>
+          <span><span style="width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #ddd;display:inline-flex;"></span> Não marcado</span>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:24px;">
+        <div class="card tone-risk">
+          <h4>🔴 Alta Prioridade</h4>
+          <p>Mercados grandes, regulação favorável ou estrategicamente críticos. Ação imediata recomendada.</p>
+        </div>
+        <div class="card tone-warn">
+          <h4>🟡 Média Prioridade</h4>
+          <p>Potencial significativo, barreiras moderadas. Monitoramento ativo e preparação de relacionamentos.</p>
+        </div>
+        <div class="card tone-good">
+          <h4>🟢 Baixa Prioridade</h4>
+          <p>Mercados emergentes ou com grandes barreiras. Horizonte de longo prazo ou entrada oportunista.</p>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="inicioPriorityFilter">
+          <button class="tab-btn active" data-filter="all">Todos (50)</button>
+          <button class="tab-btn" data-filter="alta">🔴 Alta</button>
+          <button class="tab-btn" data-filter="media">🟡 Média</button>
+          <button class="tab-btn" data-filter="baixa">🟢 Baixa</button>
+          <button class="tab-btn" data-filter="partner">✓ Parceiros</button>
+          <button class="tab-btn" data-filter="substitute">↔ Substituição</button>
+          <button class="tab-btn" data-filter="missing">✗ Em aberto</button>
+        </div>
+        <div style="font-size:12px;color:#999;margin-left:auto;">Clique ✓/✗ para marcar · Clique no país para pesquisar</div>
+      </div>
+
+      <table id="inicioRankingTable">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th style="width:60px;text-align:center;">Parceiro</th>
+            <th>País</th>
+            <th>Prioridade</th>
+            <th>Score</th>
+            <th>Mercado</th>
+            <th>Justificativa WPF</th>
+          </tr>
+        </thead>
+        <tbody id="inicioRankingBody"></tbody>
+      </table>
+
+      <div class="footer">
+        WPF Member Nations Priority Index · Análise estratégica interna · Abril 2026
+      </div>
+    </section>
+    
+    <!-- Loading -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loader"></div>
+      <div class="loading-text" id="loadingText">Pesquisando dados...</div>
+      <div class="loading-progress" id="loadingProgress"></div>
+    </div>
+    
+    <!-- Content Container -->
+    <div id="contentContainer">
+      
+      <!-- 00 - Resumo Executivo -->
+      <section class="section chapter-section active-chapter" id="resumo">
+        <div class="hero">
+          <div class="pills-wrap" id="resumoPills"></div>
+          <h2 id="resumoHeadline">Carregando...</h2>
+          <p id="resumoIntro"></p>
+        </div>
+        
+        <div class="kpi-grid" id="resumoKPIs"></div>
+        
+        <div class="callout" id="resumoCallout" style="display:none;">
+          <p id="resumoCalloutText"></p>
+        </div>
+        
+        <div class="grid-2" style="margin-top:20px;" id="resumoCards"></div>
+      </section>
+      
+      <!-- 01 - Ranking -->
+      <section class="section chapter-section chapter-hidden" id="ranking">
+        <div class="section-header">
+          <h3>Ranking de Priorização WPF</h3>
+          <p>Classificação de países por importância estratégica para a World Poker Federation, considerando tamanho de mercado, ambiente regulatório, potencial de crescimento e facilidade de entrada.</p>
+        </div>
+        
+        <div class="grid-3" style="margin-bottom:20px;">
+          <div class="card tone-risk">
+            <h4>🔴 Alta Prioridade</h4>
+            <p>Mercados grandes, ambiente favorável ou estrategicamente críticos. Ação imediata recomendada.</p>
+          </div>
+          <div class="card tone-warn">
+            <h4>🟡 Média Prioridade</h4>
+            <p>Potencial significativo, mas com barreiras moderadas. Monitoramento ativo e preparação.</p>
+          </div>
+          <div class="card tone-good">
+            <h4>🟢 Baixa Prioridade</h4>
+            <p>Mercados menores ou com grandes barreiras. Ação de longo prazo ou oportunista.</p>
+          </div>
+        </div>
+        
+        <table class="ranking-table" id="rankingTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>País</th>
+              <th>Prioridade</th>
+              <th>Score</th>
+              <th>Justificativa</th>
+            </tr>
+          </thead>
+          <tbody id="rankingBody"></tbody>
+        </table>
+      </section>
+      
+      <!-- 02 - Mercado -->
+      <section class="section chapter-section chapter-hidden" id="mercado">
+        <div class="section-header">
+          <h3>Tamanho do Mercado</h3>
+          <p id="mercadoSubtitle">Análise do mercado de poker e jogos do país selecionado.</p>
+        </div>
+        
+        <div class="kpi-grid" id="mercadoKPIs"></div>
+        
+        <div class="grid-2" style="margin-top:20px;" id="mercadoCards"></div>
+      </section>
+      
+      <!-- 03 - Visão Geral -->
+      <section class="section chapter-section chapter-hidden" id="visao-geral">
+        <div class="section-header">
+          <h3>Visão Geral e Estado Atual</h3>
+          <p id="visaoSubtitle">Panorama do cenário do poker no país.</p>
+        </div>
+        
+        <div class="grid-2" id="visaoCards"></div>
+      </section>
+      
+      <!-- 04 - Quadro Legal -->
+      <section class="section chapter-section chapter-hidden" id="quadro-legal">
+        <div class="section-header">
+          <h3>Quadro Legal</h3>
+          <p id="legalSubtitle">Estrutura jurídica que rege o poker e os jogos de azar.</p>
+        </div>
+        
+        <div class="tabs" data-tabs="legal-tabs" id="legalTabs"></div>
+        <div id="legalPanels"></div>
+      </section>
+      
+      <!-- 05 - Quadro Fiscal -->
+      <section class="section chapter-section chapter-hidden" id="quadro-fiscal">
+        <div class="section-header">
+          <h3>Quadro Fiscal e Tributação</h3>
+          <p id="fiscalSubtitle">Estrutura de impostos e taxas aplicáveis ao setor.</p>
+        </div>
+        
+        <div class="grid-3" id="fiscalCards"></div>
+        
+        <div class="card" style="margin-top:20px;" id="fiscalTable"></div>
+      </section>
+      
+      <!-- 06 - Regulador -->
+      <section class="section chapter-section chapter-hidden" id="regulador">
+        <div class="section-header">
+          <h3>Órgão Regulador</h3>
+          <p id="reguladorSubtitle">Autoridade responsável pela supervisão do mercado.</p>
+        </div>
+        
+        <div class="grid-2" id="reguladorCards"></div>
+      </section>
+      
+      <!-- 07 - Atores -->
+      <section class="section chapter-section chapter-hidden" id="atores">
+        <div class="section-header">
+          <h3>Atores Principais</h3>
+          <p id="atoresSubtitle">Quem são os principais players do mercado.</p>
+        </div>
+        
+        <div class="grid-3" id="atoresCards"></div>
+      </section>
+      
+      <!-- 08 - Timeline -->
+      <section class="section chapter-section chapter-hidden" id="linha-do-tempo">
+        <div class="section-header">
+          <h3>Linha do Tempo</h3>
+          <p id="timelineSubtitle">Evolução histórica do marco regulatório e do mercado.</p>
+        </div>
+        
+        <div class="timeline" id="timelineContent"></div>
+      </section>
+      
+      <!-- 09 - Estratégia WPF -->
+      <section class="section chapter-section chapter-hidden" id="estrategia-wpf">
+        <div class="section-header">
+          <h3>Estratégia WPF</h3>
+          <p id="wpfSubtitle">Recomendações de posicionamento e abordagem para a WPF.</p>
+        </div>
+        
+        <div class="tabs" data-tabs="wpf-tabs" id="wpfTabs"></div>
+        <div id="wpfPanels"></div>
+      </section>
+      
+      <!-- 10 - Leitura Final -->
+      <section class="section chapter-section chapter-hidden" id="leitura-final">
+        <div class="section-header">
+          <h3>Leitura Estratégica Final</h3>
+          <p>Síntese para tomada de decisão.</p>
+        </div>
+        
+        <div class="grid-2" id="leituraCards"></div>
+        
+        <div class="callout" style="margin-top:20px;" id="leituraCallout"></div>
+      </section>
+      
+      <!-- 11 - Fontes -->
+      <section class="section chapter-section chapter-hidden" id="fontes">
+        <div class="section-header">
+          <h3>Fontes e Referências</h3>
+          <p>Principais bases e documentos consultados na pesquisa.</p>
+        </div>
+        
+        <div class="source-list" id="sourcesList"></div>
+      </section>
+      
+      <div class="footer">
+        Dashboard de pesquisa estratégica WPF · Dados gerados com IA e web search · Abril 2026
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// State
+let currentCountry = '';
+let rankingData = [];
+let countryDataCache = {};
+
+// Navigation
+const navLinks = [...document.querySelectorAll('#nav a')];
+const chapterSections = [
+  document.getElementById('inicio'),
+  ...navLinks.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean)
+].filter((el, i, arr) => el && arr.indexOf(el) === i);
+
+function showChapter(id) {
+  chapterSections.forEach(sec => {
+    sec.classList.remove('active-chapter');
+    sec.classList.add('chapter-hidden');
+  });
+  navLinks.forEach(link => link.classList.remove('active'));
+  
+  const target = document.getElementById(id);
+  if (target) {
+    target.classList.remove('chapter-hidden');
+    target.classList.add('active-chapter');
+  }
+  
+  const activeLink = document.querySelector(`#nav a[href="#${id}"]`);
+  if (activeLink) activeLink.classList.add('active');
+  
+  document.querySelector('.main').scrollTop = 0;
+}
+
+navLinks.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const id = link.getAttribute('href').slice(1);
+    showChapter(id);
+  });
+});
+
+// Loading
+function showLoading(text, progress = '') {
+  document.getElementById('loadingOverlay').classList.add('active');
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingProgress').textContent = progress;
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+function updateLoadingProgress(text) {
+  document.getElementById('loadingProgress').textContent = text;
+}
+
+// API Call
+async function callClaude(prompt, systemPrompt = '') {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 8000,
+      system: systemPrompt || "Você é um analista estratégico especializado em mercados de poker e jogos de azar. Forneça informações precisas e atualizadas. Sempre responda em JSON válido.",
+      tools: [
+        {
+          "type": "web_search_20250305",
+          "name": "web_search"
+        }
+      ],
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  
+  const data = await response.json();
+  
+  // Extract text from response
+  let fullText = '';
+  if (data.content) {
+    for (const item of data.content) {
+      if (item.type === 'text') {
+        fullText += item.text;
+      }
+    }
+  }
+  
+  return fullText;
+}
+
+// Parse JSON from response
+function parseJSON(text) {
+  if (!text) return null;
+  
+  // Try to extract JSON from markdown code blocks first
+  const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+  const candidate = jsonMatch ? jsonMatch[1] : text;
+  
+  // Try direct parse
+  try {
+    return JSON.parse(candidate);
+  } catch(e) {}
+  
+  // Try to extract the first {...} block (handles trailing text)
+  try {
+    const objMatch = candidate.match(/\{[\s\S]*\}/);
+    if (objMatch) return JSON.parse(objMatch[0]);
+  } catch(e) {}
+  
+  // Try to repair truncated JSON by closing open structures
+  try {
+    let s = candidate.trim();
+    // Count unclosed brackets/braces
+    let opens = 0, inStr = false, escape = false;
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (escape) { escape = false; continue; }
+      if (c === '\\' && inStr) { escape = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (!inStr) {
+        if (c === '{' || c === '[') opens++;
+        if (c === '}' || c === ']') opens--;
+      }
+    }
+    // Remove trailing comma if any
+    s = s.replace(/,\s*$/, '');
+    // Close unclosed strings
+    if (inStr) s += '"';
+    // Close unclosed structures
+    while (opens > 0) {
+      s += '}';
+      opens--;
+    }
+    return JSON.parse(s);
+  } catch(e) {
+    console.error('JSON parse error (all attempts failed):', e.message);
+    return null;
+  }
+}
+
+// Country flag emoji
+function getFlag(countryName) {
+  const flags = {
+    'alemanha': '🇩🇪', 'germany': '🇩🇪',
+    'japão': '🇯🇵', 'japan': '🇯🇵',
+    'índia': '🇮🇳', 'india': '🇮🇳',
+    'méxico': '🇲🇽', 'mexico': '🇲🇽',
+    'brasil': '🇧🇷', 'brazil': '🇧🇷',
+    'estados unidos': '🇺🇸', 'usa': '🇺🇸', 'united states': '🇺🇸',
+    'reino unido': '🇬🇧', 'uk': '🇬🇧', 'united kingdom': '🇬🇧',
+    'china': '🇨🇳',
+    'espanha': '🇪🇸', 'spain': '🇪🇸',
+    'itália': '🇮🇹', 'italy': '🇮🇹',
+    'frança': '🇫🇷', 'france': '🇫🇷',
+    'portugal': '🇵🇹',
+    'austrália': '🇦🇺', 'australia': '🇦🇺',
+    'canadá': '🇨🇦', 'canada': '🇨🇦',
+    'argentina': '🇦🇷',
+    'rússia': '🇷🇺', 'russia': '🇷🇺',
+    'coreia do sul': '🇰🇷', 'south korea': '🇰🇷',
+    'polônia': '🇵🇱', 'poland': '🇵🇱',
+    'holanda': '🇳🇱', 'netherlands': '🇳🇱',
+    'suécia': '🇸🇪', 'sweden': '🇸🇪',
+    'suíça': '🇨🇭', 'switzerland': '🇨🇭',
+    'bélgica': '🇧🇪', 'belgium': '🇧🇪',
+    'áustria': '🇦🇹', 'austria': '🇦🇹',
+    'noruega': '🇳🇴', 'norway': '🇳🇴',
+    'dinamarca': '🇩🇰', 'denmark': '🇩🇰',
+    'finlândia': '🇫🇮', 'finland': '🇫🇮',
+    'irlanda': '🇮🇪', 'ireland': '🇮🇪',
+    'grécia': '🇬🇷', 'greece': '🇬🇷',
+    'turquia': '🇹🇷', 'turkey': '🇹🇷',
+    'emirados árabes': '🇦🇪', 'uae': '🇦🇪',
+    'israel': '🇮🇱',
+    'singapura': '🇸🇬', 'singapore': '🇸🇬',
+    'filipinas': '🇵🇭', 'philippines': '🇵🇭',
+    'indonésia': '🇮🇩', 'indonesia': '🇮🇩',
+    'tailândia': '🇹🇭', 'thailand': '🇹🇭',
+    'vietnã': '🇻🇳', 'vietnam': '🇻🇳',
+    'malásia': '🇲🇾', 'malaysia': '🇲🇾',
+    'chile': '🇨🇱',
+    'colômbia': '🇨🇴', 'colombia': '🇨🇴',
+    'peru': '🇵🇪',
+    'equador': '🇪🇨', 'ecuador': '🇪🇨',
+    'uruguai': '🇺🇾', 'uruguay': '🇺🇾',
+    'paraguai': '🇵🇾', 'paraguay': '🇵🇾',
+    'venezuela': '🇻🇪',
+    'áfrica do sul': '🇿🇦', 'south africa': '🇿🇦',
+    'egito': '🇪🇬', 'egypt': '🇪🇬',
+    'marrocos': '🇲🇦', 'morocco': '🇲🇦',
+    'nigéria': '🇳🇬', 'nigeria': '🇳🇬',
+    'quênia': '🇰🇪', 'kenya': '🇰🇪',
+    'república tcheca': '🇨🇿', 'czech republic': '🇨🇿',
+    'hungria': '🇭🇺', 'hungary': '🇭🇺',
+    'romênia': '🇷🇴', 'romania': '🇷🇴',
+    'ucrânia': '🇺🇦', 'ukraine': '🇺🇦',
+    'bulgária': '🇧🇬', 'bulgaria': '🇧🇬',
+    'croácia': '🇭🇷', 'croatia': '🇭🇷',
+    'eslovênia': '🇸🇮', 'slovenia': '🇸🇮',
+    'eslováquia': '🇸🇰', 'slovakia': '🇸🇰',
+    'sérvia': '🇷🇸', 'serbia': '🇷🇸',
+    'nova zelândia': '🇳🇿', 'new zealand': '🇳🇿'
+  };
+  
+  return flags[countryName.toLowerCase()] || '🌍';
+}
+
+// Research country
+async function researchCountry(country) {
+  showLoading('Iniciando pesquisa...', `País: ${country}`);
+  
+  try {
+    // Step 1: Get general overview and market data
+    updateLoadingProgress('Buscando dados de mercado...');
+    
+    const overviewPrompt = `
+Pesquise informações atualizadas sobre o mercado de POKER e jogos de azar em ${country}.
+
+Responda APENAS em JSON válido com esta estrutura exata:
+{
+  "countryName": "nome oficial do país",
+  "headline": "frase de impacto resumindo o cenário do poker (max 150 chars)",
+  "intro": "parágrafo explicativo sobre o contexto geral (2-3 frases)",
+  "pills": ["status legal", "tipo de mercado", "outra característica"],
+  "priority": "alta" ou "media" ou "baixa",
+  "priorityJustification": "justificativa para a prioridade WPF em 1 frase",
+  "priorityScore": número de 1-100,
+  "kpis": [
+    {"label": "nome do KPI", "value": "valor", "note": "observação curta"}
+  ],
+  "marketSize": {
+    "ggr": "valor estimado do GGR/PBJ de poker",
+    "players": "número estimado de jogadores",
+    "onlineStatus": "legal/ilegal/cinza/monopolio",
+    "liveStatus": "legal em casinos/proibido/etc",
+    "marketShare": "share do poker no mercado de jogos",
+    "trend": "crescendo/estável/declinando"
+  },
+  "overview": {
+    "strengths": ["ponto forte 1", "ponto forte 2", "ponto forte 3"],
+    "weaknesses": ["ponto fraco 1", "ponto fraco 2", "ponto fraco 3"]
+  },
+  "regulator": {
+    "name": "nome do órgão regulador",
+    "acronym": "sigla",
+    "role": "descrição do papel",
+    "website": "URL oficial"
+  }
+}
+
+Use dados reais e atuais. Se não tiver certeza, indique como "estimado" ou "não disponível".
+`;
+
+    const overviewResponse = await callClaude(overviewPrompt);
+    const overviewData = parseJSON(overviewResponse);
+    
+    if (!overviewData) {
+      throw new Error('Falha ao processar dados do país');
+    }
+    
+    // Step 2: Get legal framework
+    updateLoadingProgress('Analisando quadro legal...');
+    
+    const legalPrompt = `
+Pesquise o QUADRO LEGAL do poker e jogos de azar em ${country}.
+
+Responda APENAS em JSON:
+{
+  "classification": {
+    "title": "Como o poker é classificado",
+    "content": "descrição de como o poker é enquadrado legalmente"
+  },
+  "onlineLaw": {
+    "title": "Poker online",
+    "content": "status legal e regras do poker online"
+  },
+  "liveLaw": {
+    "title": "Poker ao vivo",
+    "content": "regras para poker live em casinos/clubes"
+  },
+  "licensing": {
+    "title": "Licenciamento",
+    "content": "como funciona o licenciamento de operadores"
+  },
+  "advertising": {
+    "title": "Publicidade",
+    "content": "regras sobre publicidade de poker/jogos"
+  },
+  "skillGame": {
+    "title": "Poker como skill game",
+    "content": "se há reconhecimento do poker como jogo de habilidade"
+  }
+}
+`;
+
+    const legalResponse = await callClaude(legalPrompt);
+    const legalData = parseJSON(legalResponse);
+    
+    // Step 3: Get fiscal framework
+    updateLoadingProgress('Levantando dados fiscais...');
+    
+    const fiscalPrompt = `
+Pesquise a TRIBUTAÇÃO do poker e jogos de azar em ${country}.
+
+Responda APENAS em JSON:
+{
+  "taxOverview": "resumo geral da carga tributária",
+  "taxes": [
+    {"name": "nome do imposto", "rate": "alíquota", "base": "base de cálculo", "note": "observação"}
+  ],
+  "playerTax": {
+    "title": "Tributação do jogador",
+    "content": "como os ganhos dos jogadores são tributados"
+  },
+  "operatorTax": {
+    "title": "Tributação do operador",
+    "content": "principais impostos sobre operadores"
+  },
+  "comparison": "como a carga se compara a outros países"
+}
+`;
+
+    const fiscalResponse = await callClaude(fiscalPrompt);
+    const fiscalData = parseJSON(fiscalResponse);
+    
+    // Step 4: Get key players and timeline
+    updateLoadingProgress('Mapeando atores e histórico...');
+    
+    const actorsPrompt = `
+Pesquise os PRINCIPAIS ATORES e LINHA DO TEMPO do poker em ${country}.
+
+Responda APENAS em JSON:
+{
+  "actors": [
+    {"name": "nome", "type": "operador/federação/regulador/outro", "description": "descrição curta", "relevance": "alta/media/baixa"}
+  ],
+  "timeline": [
+    {"year": "ano", "title": "título do evento", "description": "descrição do que aconteceu"}
+  ]
+}
+
+Inclua pelo menos 5 atores relevantes e 5 eventos históricos importantes.
+`;
+
+    const actorsResponse = await callClaude(actorsPrompt);
+    const actorsData = parseJSON(actorsResponse);
+    
+    // Step 5: Get WPF strategy
+    updateLoadingProgress('Elaborando estratégia WPF...');
+    
+    const wpfPrompt = `
+Como analista estratégico da World Poker Federation (WPF), elabore recomendações para ${country}.
+
+A WPF é a federação mundial de poker reconhecida pela IMSA (International Mind Sports Association). O objetivo é expandir a presença do poker como esporte da mente e ter países membros (member nations).
+
+Responda APENAS em JSON:
+{
+  "opportunities": ["oportunidade 1", "oportunidade 2", "oportunidade 3", "oportunidade 4"],
+  "risks": ["risco 1", "risco 2", "risco 3", "risco 4"],
+  "approach": {
+    "title": "Abordagem recomendada",
+    "content": "estratégia geral para entrada/expansão"
+  },
+  "narrative": {
+    "title": "Narrativa a usar",
+    "content": "como a WPF deve se posicionar"
+  },
+  "partners": {
+    "title": "Parceiros potenciais",
+    "content": "quem a WPF deve buscar como aliados"
+  },
+  "avoid": {
+    "title": "O que evitar",
+    "content": "riscos de posicionamento"
+  },
+  "oneLiner": "Em uma frase, qual é a estratégia central para este país"
+}
+`;
+
+    const wpfResponse = await callClaude(wpfPrompt);
+    const wpfData = parseJSON(wpfResponse);
+    
+    // Compile all data
+    const countryData = {
+      overview: overviewData,
+      legal: legalData,
+      fiscal: fiscalData,
+      actors: actorsData,
+      wpf: wpfData
+    };
+    
+    // Cache the data
+    countryDataCache[country.toLowerCase()] = countryData;
+    
+    // Add to ranking
+    addToRanking(country, overviewData);
+    
+    // Render the dashboard
+    renderDashboard(country, countryData);
+    
+    hideLoading();
+    
+  } catch (error) {
+    console.error('Research error:', error);
+    hideLoading();
+    alert('Erro ao pesquisar o país. Tente novamente.');
+  }
+}
+
+// Add country to ranking
+function addToRanking(country, data) {
+  rankingData = rankingData.filter(r => r.country.toLowerCase() !== country.toLowerCase());
+  
+  rankingData.push({
+    country: data.countryName || country,
+    flag: getFlag(country),
+    priority: data.priority || 'media',
+    score: data.priorityScore || 50,
+    justification: data.priorityJustification || 'Análise em andamento'
+  });
+  
+  rankingData.sort((a, b) => b.score - a.score);
+  renderRanking();
+}
+
+// Render ranking table
+function renderRanking() {
+  const tbody = document.getElementById('rankingBody');
+  tbody.innerHTML = rankingData.map((item, idx) => `
+    <tr>
+      <td>${idx + 1}</td>
+      <td>
+        <div class="ranking-country">
+          <span class="ranking-flag">${item.flag}</span>
+          <span class="ranking-name">${item.country}</span>
+        </div>
+      </td>
+      <td>
+        <span class="priority-badge priority-${item.priority}">
+          ${item.priority === 'alta' ? '🔴' : item.priority === 'media' ? '🟡' : '🟢'} ${item.priority}
+        </span>
+      </td>
+      <td><span class="ranking-score">${item.score}</span></td>
+      <td>${item.justification}</td>
+    </tr>
+  `).join('');
+}
+
+// Render full dashboard
+function renderDashboard(country, data) {
+  const { overview, legal, fiscal, actors, wpf } = data;
+  const flag = getFlag(country);
+  
+  document.getElementById('contentContainer').style.display = 'block';
+  
+  // === RESUMO ===
+  document.getElementById('resumoPills').innerHTML = (overview.pills || []).map(p => 
+    `<span class="pill">${p}</span>`
+  ).join('');
+  
+  document.getElementById('resumoHeadline').innerHTML = `${flag} ${overview.headline || country}`;
+  document.getElementById('resumoIntro').textContent = overview.intro || '';
+  
+  document.getElementById('resumoKPIs').innerHTML = (overview.kpis || []).slice(0, 6).map(kpi => `
+    <div class="stat tone-soft">
+      <small>${kpi.label}</small>
+      <strong>${kpi.value}</strong>
+      <span>${kpi.note || ''}</span>
+    </div>
+  `).join('');
+  
+  if (overview.marketSize) {
+    document.getElementById('resumoCallout').style.display = 'block';
+    document.getElementById('resumoCalloutText').innerHTML = `
+      <strong>Leitura rápida:</strong> Mercado ${overview.marketSize.onlineStatus} para online, ${overview.marketSize.liveStatus} para live. 
+      Tendência: ${overview.marketSize.trend}.
+    `;
+  }
+  
+  document.getElementById('resumoCards').innerHTML = `
+    <div class="card tone-good">
+      <h4>O que sustenta o poker</h4>
+      <ul>${(overview.overview?.strengths || []).map(s => `<li>${s}</li>`).join('')}</ul>
+    </div>
+    <div class="card tone-risk">
+      <h4>O que pressiona</h4>
+      <ul>${(overview.overview?.weaknesses || []).map(w => `<li>${w}</li>`).join('')}</ul>
+    </div>
+  `;
+  
+  // === MERCADO ===
+  document.getElementById('mercadoSubtitle').textContent = `Análise do mercado de poker em ${overview.countryName || country}.`;
+  
+  const ms = overview.marketSize || {};
+  document.getElementById('mercadoKPIs').innerHTML = `
+    <div class="stat tone-soft"><small>GGR/PBJ Poker</small><strong>${ms.ggr || 'N/D'}</strong></div>
+    <div class="stat tone-soft"><small>Jogadores</small><strong>${ms.players || 'N/D'}</strong></div>
+    <div class="stat tone-soft"><small>Online</small><strong>${ms.onlineStatus || 'N/D'}</strong></div>
+    <div class="stat tone-soft"><small>Live</small><strong>${ms.liveStatus || 'N/D'}</strong></div>
+    <div class="stat tone-soft"><small>Share no mercado</small><strong>${ms.marketShare || 'N/D'}</strong></div>
+    <div class="stat tone-soft"><small>Tendência</small><strong>${ms.trend || 'N/D'}</strong></div>
+  `;
+  
+  // === VISÃO GERAL ===
+  document.getElementById('visaoSubtitle').textContent = `Panorama do cenário do poker em ${overview.countryName || country}.`;
+  document.getElementById('visaoCards').innerHTML = `
+    <div class="card tone-good">
+      <h4>Pontos fortes</h4>
+      <ul>${(overview.overview?.strengths || []).map(s => `<li>${s}</li>`).join('')}</ul>
+    </div>
+    <div class="card tone-risk">
+      <h4>Pontos de atenção</h4>
+      <ul>${(overview.overview?.weaknesses || []).map(w => `<li>${w}</li>`).join('')}</ul>
+    </div>
+  `;
+  
+  // === QUADRO LEGAL ===
+  document.getElementById('legalSubtitle').textContent = `Estrutura jurídica do poker em ${overview.countryName || country}.`;
+  
+  if (legal) {
+    const legalSections = Object.entries(legal).filter(([k, v]) => v && typeof v === 'object' && v.title);
+    
+    document.getElementById('legalTabs').innerHTML = legalSections.map(([key, val], idx) => `
+      <button class="tab-btn ${idx === 0 ? 'active' : ''}" data-tab="legal-${key}">${val.title}</button>
+    `).join('');
+    
+    document.getElementById('legalPanels').innerHTML = legalSections.map(([key, val], idx) => `
+      <div class="tab-panel ${idx === 0 ? 'active' : ''}" id="legal-${key}">
+        <div class="card">
+          <h4>${val.title}</h4>
+          <p>${val.content}</p>
+        </div>
+      </div>
+    `).join('');
+    
+    attachTabListeners();
+  }
+  
+  // === QUADRO FISCAL ===
+  document.getElementById('fiscalSubtitle').textContent = `Tributação de poker em ${overview.countryName || country}.`;
+  
+  if (fiscal) {
+    document.getElementById('fiscalCards').innerHTML = `
+      <div class="card">
+        <h4>Visão geral</h4>
+        <p>${fiscal.taxOverview || 'Informações não disponíveis'}</p>
+      </div>
+      ${fiscal.playerTax ? `<div class="card tone-warn"><h4>${fiscal.playerTax.title}</h4><p>${fiscal.playerTax.content}</p></div>` : ''}
+      ${fiscal.operatorTax ? `<div class="card tone-warn"><h4>${fiscal.operatorTax.title}</h4><p>${fiscal.operatorTax.content}</p></div>` : ''}
+    `;
+    
+    if (fiscal.taxes && fiscal.taxes.length > 0) {
+      document.getElementById('fiscalTable').innerHTML = `
+        <h4>Estrutura de impostos</h4>
+        <table style="margin-top:12px;">
+          <thead>
+            <tr><th>Imposto</th><th>Alíquota</th><th>Base</th><th>Observação</th></tr>
+          </thead>
+          <tbody>
+            ${fiscal.taxes.map(t => `
+              <tr>
+                <td><strong>${t.name}</strong></td>
+                <td>${t.rate}</td>
+                <td>${t.base}</td>
+                <td>${t.note || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+  }
+  
+  // === REGULADOR ===
+  document.getElementById('reguladorSubtitle').textContent = `Autoridade reguladora em ${overview.countryName || country}.`;
+  
+  const reg = overview.regulator || {};
+  document.getElementById('reguladorCards').innerHTML = `
+    <div class="card">
+      <h4>${reg.acronym || 'Órgão regulador'}</h4>
+      <p><strong>${reg.name || 'Não identificado'}</strong></p>
+      <p style="margin-top:8px;">${reg.role || ''}</p>
+      ${reg.website ? `<p style="margin-top:8px;"><a href="${reg.website}" target="_blank">Site oficial →</a></p>` : ''}
+    </div>
+    <div class="card tone-soft">
+      <h4>Funções principais</h4>
+      <ul>
+        <li>Licenciamento de operadores</li>
+        <li>Supervisão e fiscalização</li>
+        <li>Proteção ao consumidor</li>
+        <li>Controle de integridade</li>
+      </ul>
+    </div>
+  `;
+  
+  // === ATORES ===
+  document.getElementById('atoresSubtitle').textContent = `Principais players do mercado em ${overview.countryName || country}.`;
+  
+  if (actors && actors.actors) {
+    document.getElementById('atoresCards').innerHTML = actors.actors.map(actor => `
+      <div class="card ${actor.relevance === 'alta' ? 'tone-good' : ''}">
+        <h4>${actor.name}</h4>
+        <p><span class="pill">${actor.type}</span></p>
+        <p style="margin-top:8px;">${actor.description}</p>
+      </div>
+    `).join('');
+  }
+  
+  // === TIMELINE ===
+  document.getElementById('timelineSubtitle').textContent = `Evolução histórica do poker em ${overview.countryName || country}.`;
+  
+  if (actors && actors.timeline) {
+    document.getElementById('timelineContent').innerHTML = actors.timeline.map(event => `
+      <article class="timeline-item">
+        <div class="year">${event.year}</div>
+        <h4>${event.title}</h4>
+        <p>${event.description}</p>
+      </article>
+    `).join('');
+  }
+  
+  // === ESTRATÉGIA WPF ===
+  document.getElementById('wpfSubtitle').textContent = `Recomendações para a WPF em ${overview.countryName || country}.`;
+  
+  if (wpf) {
+    const wpfSections = [
+      { key: 'approach', data: wpf.approach },
+      { key: 'narrative', data: wpf.narrative },
+      { key: 'partners', data: wpf.partners },
+      { key: 'avoid', data: wpf.avoid }
+    ].filter(s => s.data);
+    
+    document.getElementById('wpfTabs').innerHTML = wpfSections.map((s, idx) => `
+      <button class="tab-btn ${idx === 0 ? 'active' : ''}" data-tab="wpf-${s.key}">${s.data.title}</button>
+    `).join('');
+    
+    document.getElementById('wpfPanels').innerHTML = wpfSections.map((s, idx) => `
+      <div class="tab-panel ${idx === 0 ? 'active' : ''}" id="wpf-${s.key}">
+        <div class="card ${s.key === 'avoid' ? 'tone-risk' : 'tone-good'}">
+          <h4>${s.data.title}</h4>
+          <p>${s.data.content}</p>
+        </div>
+      </div>
+    `).join('');
+    
+    attachTabListeners();
+  }
+  
+  // === LEITURA FINAL ===
+  if (wpf) {
+    document.getElementById('leituraCards').innerHTML = `
+      <div class="card tone-good">
+        <h4>Oportunidades</h4>
+        <ul>${(wpf.opportunities || []).map(o => `<li>${o}</li>`).join('')}</ul>
+      </div>
+      <div class="card tone-risk">
+        <h4>Riscos</h4>
+        <ul>${(wpf.risks || []).map(r => `<li>${r}</li>`).join('')}</ul>
+      </div>
+    `;
+    
+    document.getElementById('leituraCallout').innerHTML = `
+      <p><strong>Em uma frase:</strong> ${wpf.oneLiner || 'Análise em andamento.'}</p>
+    `;
+  }
+  
+  // === FONTES ===
+  document.getElementById('sourcesList').innerHTML = `
+    <a href="https://www.google.com/search?q=poker+gambling+law+${encodeURIComponent(country)}" target="_blank">Pesquisa: legislação de jogos ${country}</a>
+    <a href="https://www.google.com/search?q=poker+market+${encodeURIComponent(country)}+2024+2025" target="_blank">Pesquisa: mercado de poker ${country}</a>
+    ${overview.regulator?.website ? `<a href="${overview.regulator.website}" target="_blank">${overview.regulator.name || 'Site do regulador'}</a>` : ''}
+    <span style="color:#888; font-size:12px;">Dados compilados via pesquisa web com IA em ${new Date().toLocaleDateString('pt-BR')}</span>
+  `;
+  
+  showChapter('resumo');
+}
+
+// Tab listeners
+function attachTabListeners() {
+  document.querySelectorAll('[data-tabs]').forEach(tabGroup => {
+    const buttons = tabGroup.querySelectorAll('.tab-btn');
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        const wrapper = tabGroup.parentElement;
+        buttons.forEach(btn => btn.classList.remove('active'));
+        wrapper.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+        button.classList.add('active');
+        const target = wrapper.querySelector(`#${button.dataset.tab}`);
+        if (target) target.classList.add('active');
+      });
+    });
+  });
+}
+
+// Search handler
+document.getElementById('searchBtn').addEventListener('click', () => {
+  const country = document.getElementById('countryInput').value.trim();
+  if (country) {
+    currentCountry = country;
+    researchCountry(country);
+  }
+});
+
+document.getElementById('countryInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    const country = e.target.value.trim();
+    if (country) {
+      currentCountry = country;
+      researchCountry(country);
+    }
+  }
+});
+
+// Top 50 WPF Member Nations Priority Index
+const TOP50 = [
+  { country: 'Estados Unidos',    flag: '🇺🇸', priority: 'alta',  score: 98, market: 'US$ 2.4bi+',   justification: 'Maior mercado de poker do mundo, WSOP, expansão regulatória estado a estado' },
+  { country: 'Reino Unido',       flag: '🇬🇧', priority: 'alta',  score: 93, market: '£ 1.2bi',      justification: 'Mercado maduro, regulação exemplar pela UKGC, forte cultura de poker' },
+  { country: 'França',            flag: '🇫🇷', priority: 'alta',  score: 89, market: '€ 450mi',      justification: 'Berço do poker europeu, EPT Paris, regulação ANJ consolidada' },
+  { country: 'Alemanha',          flag: '🇩🇪', priority: 'alta',  score: 87, market: '€ 380mi',      justification: 'Maior economia europeia, nova lei de jogos de 2021, grande base de jogadores' },
+  { country: 'Itália',            flag: '🇮🇹', priority: 'alta',  score: 85, market: '€ 340mi',      justification: 'Regulação AAMS sólida, forte mercado online e live, tradição de poker' },
+  { country: 'Espanha',           flag: '🇪🇸', priority: 'alta',  score: 83, market: '€ 290mi',      justification: 'Mercado regulado robusto, circuito live ativo, potencial de crescimento' },
+  { country: 'Austrália',         flag: '🇦🇺', priority: 'alta',  score: 82, market: 'AUD 600mi',    justification: 'Alta penetração de jogos, australianos entre os maiores jogadores per capita' },
+  { country: 'Canadá',            flag: '🇨🇦', priority: 'alta',  score: 81, market: 'CAD 700mi',    justification: 'Mercado em expansão, regulação provincial avançando, base bilíngue estratégica' },
+  { country: 'Brasil',            flag: '🇧🇷', priority: 'alta',  score: 80, market: 'R$ 2bi+',      justification: 'Maior país da América Latina, regulação aprovada em 2025, enorme potencial' },
+  { country: 'Portugal',          flag: '🇵🇹', priority: 'alta',  score: 78, market: '€ 110mi',      justification: 'Gateway para mercados lusófonos, regulação SRIJ madura, polo de poker europeu' },
+  { country: 'Holanda',           flag: '🇳🇱', priority: 'alta',  score: 76, market: '€ 160mi',      justification: 'Regulação KSA recente (2021), mercado digital sofisticado, hub europeu' },
+  { country: 'Suécia',            flag: '🇸🇪', priority: 'alta',  score: 75, market: 'SEK 1.8bi',    justification: 'Mercado nórdico líder, regulação reaberta em 2019, jogadores de elite' },
+  { country: 'Bélgica',           flag: '🇧🇪', priority: 'alta',  score: 73, market: '€ 130mi',      justification: 'Centro da UE, boa regulação, histórico de grandes torneios EPT' },
+  { country: 'Áustria',           flag: '🇦🇹', priority: 'alta',  score: 71, market: '€ 100mi',      justification: 'Mercado premium, jogadores de alta renda, casinos tradicionais fortes' },
+  { country: 'Suíça',             flag: '🇨🇭', priority: 'alta',  score: 70, market: 'CHF 180mi',    justification: 'Alta renda per capita, polo financeiro, abertura regulatória crescente' },
+  { country: 'México',            flag: '🇲🇽', priority: 'alta',  score: 68, market: 'MXN 3.5bi',   justification: 'Maior mercado hispânico das Américas, crescimento acelerado, casinos proliferados' },
+  { country: 'Argentina',         flag: '🇦🇷', priority: 'media', score: 65, market: 'USD 180mi',    justification: 'Segunda maior base da América do Sul, forte cultura de poker, regulação em transição' },
+  { country: 'República Tcheca',  flag: '🇨🇿', priority: 'media', score: 64, market: '€ 90mi',       justification: 'Hub do poker no Leste Europeu, WSOP Circuit, regulação progressista' },
+  { country: 'Polônia',           flag: '🇵🇱', priority: 'media', score: 63, market: '€ 120mi',      justification: 'Grande mercado emergente na Europa Central, crescimento online robusto' },
+  { country: 'Romênia',           flag: '🇷🇴', priority: 'media', score: 62, market: '€ 80mi',       justification: 'Mercado regulado em crescimento, jogadores de alto nível, custos competitivos' },
+  { country: 'Hungria',           flag: '🇭🇺', priority: 'media', score: 61, market: '€ 60mi',       justification: 'Sede de grandes torneios europeus, regulação estável, base ativa de jogadores' },
+  { country: 'Dinamarca',         flag: '🇩🇰', priority: 'media', score: 60, market: 'DKK 400mi',    justification: 'Mercado nórdico regulado, players de elite, alto poder aquisitivo' },
+  { country: 'Noruega',           flag: '🇳🇴', priority: 'media', score: 59, market: 'NOK 800mi',    justification: 'Alta renda, maior monopólio estatal da Europa, abertura online em discussão' },
+  { country: 'Finlândia',         flag: '🇫🇮', priority: 'media', score: 58, market: '€ 70mi',       justification: 'Jogadores de alto nível, cultura de jogo, reforma regulatória em andamento' },
+  { country: 'Irlanda',           flag: '🇮🇪', priority: 'media', score: 57, market: '€ 85mi',       justification: 'Mercado anglófono ativo, boa regulação, sede europeia de várias plataformas' },
+  { country: 'Grécia',            flag: '🇬🇷', priority: 'media', score: 55, market: '€ 60mi',       justification: 'Mercado em recuperação pós-crise, regulação HGC modernizada' },
+  { country: 'Turquia',           flag: '🇹🇷', priority: 'media', score: 53, market: 'USD 120mi',    justification: 'Grande mercado cinza, potencial enorme se regulamentado, país-ponte Europa-Ásia' },
+  { country: 'Singapura',         flag: '🇸🇬', priority: 'media', score: 52, market: 'SGD 280mi',    justification: 'Hub financeiro asiático, dois IRs de classe mundial, poker live premium' },
+  { country: 'Filipinas',         flag: '🇵🇭', priority: 'media', score: 51, market: 'USD 150mi',    justification: 'Hub de poker da Ásia, PAGCOR regulador ativo, EPT/WPT realizados no país' },
+  { country: 'África do Sul',     flag: '🇿🇦', priority: 'media', score: 50, market: 'ZAR 800mi',    justification: 'Maior mercado africano, casinos regulados, poker crescendo em Joanesburgo/Cape Town' },
+  { country: 'Israel',            flag: '🇮🇱', priority: 'media', score: 49, market: 'USD 90mi',     justification: 'Alta densidade de jogadores de elite, cultura tech, poker online em zona cinza' },
+  { country: 'Ucrânia',           flag: '🇺🇦', priority: 'media', score: 48, market: 'USD 80mi',     justification: 'Regulação aprovada em 2020, grande base de jogadores, recuperação pós-conflito' },
+  { country: 'Colômbia',          flag: '🇨🇴', priority: 'media', score: 47, market: 'COP 300bi',    justification: 'Regulação Coljuegos avançada, mercado em rápida expansão, crescimento de renda' },
+  { country: 'Chile',             flag: '🇨🇱', priority: 'media', score: 46, market: 'USD 70mi',     justification: 'Maior renda per capita da América do Sul, casinos regulados, poker em crescimento' },
+  { country: 'Peru',              flag: '🇵🇪', priority: 'media', score: 44, market: 'USD 50mi',     justification: 'Mercado emergente com regulação, base de jogadores crescente, Lima como polo' },
+  { country: 'Japão',             flag: '🇯🇵', priority: 'media', score: 43, market: 'USD 8.1bi*',   justification: 'Mercado offshore gigante, IRs em construção (Osaka 2030), potencial transformador' },
+  { country: 'Coreia do Sul',     flag: '🇰🇷', priority: 'media', score: 42, market: 'USD 200mi',    justification: 'Mercado grande com restrições, Kangwon Land IR, crescimento de esports/gaming' },
+  { country: 'Malásia',           flag: '🇲🇾', priority: 'media', score: 40, market: 'MYR 300mi',    justification: 'Genting Highlands, mercado não-muçulmano ativo, hub regional do Sudeste Asiático' },
+  { country: 'Emirados Árabes',   flag: '🇦🇪', priority: 'media', score: 39, market: 'USD 150mi',    justification: 'Wynn Ras Al Khaimah inaugurado em 2025, abertura regulatória histórica' },
+  { country: 'Índia',             flag: '🇮🇳', priority: 'media', score: 38, market: 'USD 500mi',    justification: 'Mercado enorme em potencial, poker como skill game em alguns estados, 1.4bi de pessoas' },
+  { country: 'Marrocos',          flag: '🇲🇦', priority: 'baixa', score: 35, market: 'USD 40mi',     justification: 'Casinos turísticos regulados, gateway para África do Norte e Francofonia' },
+  { country: 'Nigéria',           flag: '🇳🇬', priority: 'baixa', score: 34, market: 'USD 60mi',     justification: 'Maior economia africana, poker crescendo em Lagos, regulação em desenvolvimento' },
+  { country: 'Uruguai',           flag: '🇺🇾', priority: 'baixa', score: 33, market: 'USD 25mi',     justification: 'Regulação progressista na América do Sul, pequeno mercado mas jurídicamente seguro' },
+  { country: 'Malta',             flag: '🇲🇹', priority: 'baixa', score: 32, market: '€ 40mi',       justification: 'Jurisdição de licenciamento pan-europeu, MGA referência mundial, hub de operators' },
+  { country: 'Bulgária',          flag: '🇧🇬', priority: 'baixa', score: 31, market: '€ 35mi',       justification: 'Custos baixos, regulação EU, destino emergente de torneios do Leste Europeu' },
+  { country: 'Sérvia',            flag: '🇷🇸', priority: 'baixa', score: 30, market: '€ 30mi',       justification: 'Poker crescendo em Belgrado, regulação em maturação, mercado dos Bálcãs' },
+  { country: 'Croácia',           flag: '🇭🇷', priority: 'baixa', score: 29, market: '€ 25mi',       justification: 'Destino turístico com casinos, Rovinj como polo de torneios europeus' },
+  { country: 'Vietnã',            flag: '🇻🇳', priority: 'baixa', score: 28, market: 'USD 45mi',     justification: 'Casinos para estrangeiros, mercado doméstico restrito, potencial de longo prazo' },
+  { country: 'Tailândia',         flag: '🇹🇭', priority: 'baixa', score: 27, market: 'USD 35mi',     justification: 'Debate de legalização de cassinos em andamento, grande população de jogadores' },
+  { country: 'Nova Zelândia',     flag: '🇳🇿', priority: 'baixa', score: 25, market: 'NZD 60mi',     justification: 'Mercado maduro pequeno, regulação SkyCity, jogadores de qualidade' }
+];
+
+// Partner status: 'partner' | 'missing' | undefined — apenas memória, sem localStorage
+const partnerStatus = {};
+
+function updateCoverage() {
+  const total      = TOP50.length;
+  const partners   = TOP50.filter(r => partnerStatus[r.country] === 'partner').length;
+  const substitute = TOP50.filter(r => partnerStatus[r.country] === 'substitute').length;
+  const missing    = TOP50.filter(r => partnerStatus[r.country] === 'missing').length;
+  const pct = Math.round((partners / total) * 100);
+  document.getElementById('cvPartner').textContent    = partners;
+  document.getElementById('cvSubstitute').textContent = substitute;
+  document.getElementById('cvMissing').textContent    = missing;
+  document.getElementById('cvPct').textContent  = pct + '%';
+  document.getElementById('cvFill').style.width = pct + '%';
+}
+
+function togglePartner(country) {
+  const cur = partnerStatus[country];
+  // ciclo: undefined → partner → substitute → missing → undefined
+  if (!cur)                   partnerStatus[country] = 'partner';
+  else if (cur === 'partner') partnerStatus[country] = 'substitute';
+  else if (cur === 'substitute') partnerStatus[country] = 'missing';
+  else                        delete partnerStatus[country];
+
+  const row = document.querySelector(`tr[data-country="${CSS.escape(country)}"]`);
+  if (row) applyRowStatus(row, country);
+  updateCoverage();
+
+  const activeFilter = document.querySelector('#inicioPriorityFilter .tab-btn.active')?.dataset.filter || 'all';
+  if (['partner','substitute','missing'].includes(activeFilter)) renderInicioRanking(activeFilter);
+}
+
+function applyRowStatus(row, country) {
+  const status = partnerStatus[country];
+  const btn = row.querySelector('.partner-check');
+  row.className = status === 'partner'    ? 'row-partner'
+                : status === 'substitute' ? 'row-substitute'
+                : status === 'missing'    ? 'row-not-partner'
+                : '';
+  btn.className = 'partner-check'
+    + (status === 'partner'    ? ' is-partner'
+     : status === 'substitute' ? ' is-substitute'
+     : status === 'missing'    ? ' not-partner'
+     : '');
+  btn.textContent = status === 'partner'    ? '✓'
+                  : status === 'substitute' ? '↔'
+                  : status === 'missing'    ? '✗'
+                  : '';
+  btn.title = status === 'partner'    ? 'Parceiro — clique para Substituição'
+            : status === 'substitute' ? 'Substituição — clique para Em aberto'
+            : status === 'missing'    ? 'Em aberto — clique para limpar'
+            : 'Clique para marcar como Parceiro';
+}
+
+function renderInicioRanking(filter = 'all') {
+  let filtered = TOP50;
+  if (['alta','media','baixa'].includes(filter)) {
+    filtered = TOP50.filter(r => r.priority === filter);
+  } else if (filter === 'partner') {
+    filtered = TOP50.filter(r => partnerStatus[r.country] === 'partner');
+  } else if (filter === 'substitute') {
+    filtered = TOP50.filter(r => partnerStatus[r.country] === 'substitute');
+  } else if (filter === 'missing') {
+    filtered = TOP50.filter(r => !partnerStatus[r.country] || partnerStatus[r.country] === 'missing');
+  }
+
+  document.getElementById('inicioRankingBody').innerHTML = filtered.map((item) => {
+    const globalRank = TOP50.indexOf(item) + 1;
+    const status = partnerStatus[item.country];
+    const rowClass   = status === 'partner'    ? 'row-partner'
+                     : status === 'substitute' ? 'row-substitute'
+                     : status === 'missing'    ? 'row-not-partner'
+                     : '';
+    const checkClass = status === 'partner'    ? 'is-partner'
+                     : status === 'substitute' ? 'is-substitute'
+                     : status === 'missing'    ? 'not-partner'
+                     : '';
+    const checkIcon  = status === 'partner'    ? '✓'
+                     : status === 'substitute' ? '↔'
+                     : status === 'missing'    ? '✗'
+                     : '';
+    const checkTitle = status === 'partner'    ? 'Parceiro — clique para Substituição'
+                     : status === 'substitute' ? 'Substituição — clique para Em aberto'
+                     : status === 'missing'    ? 'Em aberto — clique para limpar'
+                     : 'Clique para marcar como Parceiro';
+
+    return `
+      <tr class="${rowClass}" data-country="${item.country}">
+        <td style="font-weight:700;color:#1a1a1a;font-size:15px;">${globalRank}</td>
+        <td style="text-align:center;">
+          <div class="partner-check ${checkClass}" title="${checkTitle}">${checkIcon}</div>
+        </td>
+        <td class="country-cell" style="cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:22px;">${item.flag}</span>
+            <span style="font-weight:600;color:#1a1a1a;">${item.country}</span>
+          </div>
+        </td>
+        <td>
+          <span class="priority-badge priority-${item.priority}">
+            ${item.priority === 'alta' ? '🔴' : item.priority === 'media' ? '🟡' : '🟢'} ${item.priority}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:60px;height:6px;background:#e0e0e6;border-radius:3px;overflow:hidden;">
+              <div style="width:${item.score}%;height:100%;background:${item.priority==='alta'?'#7c5cbf':item.priority==='media'?'#b5651d':'#3d6b4f'};border-radius:3px;"></div>
+            </div>
+            <span style="font-family:'Instrument Serif',serif;font-size:18px;">${item.score}</span>
+          </div>
+        </td>
+        <td style="font-size:12px;color:#666;">${item.market}</td>
+        <td style="font-size:13px;color:#444;">${item.justification}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Event delegation no tbody — um único listener para checklist e clique no país
+document.getElementById('inicioRankingBody').addEventListener('click', e => {
+  const row = e.target.closest('tr[data-country]');
+  if (!row) return;
+  const country = row.dataset.country;
+
+  if (e.target.closest('.partner-check')) {
+    togglePartner(country);
+  } else if (e.target.closest('.country-cell')) {
+    document.getElementById('countryInput').value = country;
+    currentCountry = country;
+    researchCountry(country);
+  }
+});
+
+// Filter buttons
+document.getElementById('inicioPriorityFilter').addEventListener('click', e => {
+  const btn = e.target.closest('[data-filter]');
+  if (!btn) return;
+  document.querySelectorAll('#inicioPriorityFilter .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderInicioRanking(btn.dataset.filter);
+});
+
+// Initialize ranking data (used for country-specific ranking updates)
+rankingData = TOP50.map(r => ({ ...r }));
+renderRanking();
+renderInicioRanking();
+updateCoverage();
+
+showChapter('inicio');
+</script>
+</body>
+</html>
