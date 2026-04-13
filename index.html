@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <style>
 :root {
   --bg:#F7F8FA; --surface:#fff; --surface2:#F1F4F8;
@@ -81,6 +83,8 @@ body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--t
 #brazil-overlay svg{display:block}
 .st{cursor:pointer;pointer-events:all;transition:filter .15s,opacity .15s;stroke:#1a1a1a;stroke-width:1.2;stroke-linejoin:round}
 .st:hover{filter:brightness(.82) saturate(1.2)}
+.bst{cursor:pointer;pointer-events:all;transition:fill .2s,filter .15s;stroke:#fff;stroke-width:1.2;stroke-linejoin:round}
+.bst:hover{filter:brightness(.88) saturate(1.15)}
 
 /* Emoji overlay */
 #emoji-layer{position:absolute;z-index:3;pointer-events:none}
@@ -175,7 +179,10 @@ tbody tr:last-child td{border-bottom:none}
 .hcell{min-width:90px;padding:0;border:1px solid var(--border);text-align:center;position:relative;cursor:pointer}
 .hcell-inner{display:flex;align-items:center;justify-content:center;padding:5px 6px;font-size:11px;font-weight:600;border-radius:5px;margin:2px;white-space:nowrap;transition:filter .1s;position:relative;z-index:1}
 .hcell-inner:hover{filter:brightness(.9)}
-.hcell select{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+/* select overlay fica DENTRO do hcell-inner, não cobre o td inteiro */
+.hcell-inner > select.hcell-overlay{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+/* legado: select direto no td (células de evento não usam isso) */
+.hcell > select.hcell-overlay{display:none}
 .hrow-uf{width:36px;min-width:36px;padding:5px 6px;font-family:'DM Mono',monospace;font-size:11px;font-weight:700;text-align:center;border-right:1px solid var(--border);position:sticky;left:0;background:var(--surface);z-index:4}
 .hrow-label{min-width:120px;max-width:140px;padding:5px 8px;font-size:11px;font-weight:500;color:var(--txt2);border-right:1.5px solid var(--border);position:sticky;left:36px;background:var(--surface);z-index:4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hcol-month{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);white-space:nowrap;text-align:center;min-width:90px}
@@ -223,10 +230,17 @@ tbody tr:last-child td{border-bottom:none}
 
 <div class="nav">
   <div class="nav-tab active" data-page="federacoes">🗺 Federações</div>
+  <div class="nav-tab" data-page="mapa">🌍 Mapa</div>
   <div class="nav-tab" data-page="dados">📋 Cadastro</div>
-  <div class="nav-tab" data-page="historico">📅 Histórico Mensal</div>
-  <div style="margin-left:auto;display:flex;align-items:center;padding:0 20px">
+  <div class="nav-tab" data-page="historico">📅 Progressão</div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:12px;padding:0 20px">
     <span id="sync-status" style="font-size:11px;font-weight:500;transition:color .3s"></span>
+    <button id="btn-atualizar-geral" onclick="atualizarGeral()"
+      style="display:flex;align-items:center;gap:6px;background:var(--txt);color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s"
+      onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <span id="btn-atualizar-icon">⟳</span>
+      <span id="btn-atualizar-label">Atualizar Dados</span>
+    </button>
   </div>
 </div>
 
@@ -249,8 +263,7 @@ tbody tr:last-child td{border-bottom:none}
           <div class="viz-tab" data-viz="gestao"><span class="vt-dot" style="background:#1D4ED8"></span>Gestão &amp; Esportividade</div>
           <div class="viz-tab" data-viz="cbth"><span class="vt-dot" style="background:#16A34A"></span>CBTH pelo Brasil</div>
           <div class="viz-tab" data-viz="digital"><span class="vt-dot" style="background:#6B21A8"></span>Presença Digital</div>
-          <div class="viz-tab" data-viz="diversidade"><span class="vt-dot" style="background:#EA580C"></span>Diversidade &amp; Inclusão</div>
-          <div class="viz-tab" data-viz="banco"><span class="vt-dot" style="background:#78350F"></span>Banco de Dados</div>
+          <div class="viz-tab" data-viz="banco"><span class="vt-dot" style="background:#EA580C"></span>Banco de Dados</div>
         </div>
       </div>
 
@@ -365,13 +378,12 @@ tbody tr:last-child td{border-bottom:none}
         <!-- Sub-layer selector tabs -->
         <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap">
           <button class="dig-sub-btn active" data-sub="ig_status" onclick="setDigSub(this,'ig_status')">Instagram</button>
-          <button class="dig-sub-btn" data-sub="div" onclick="setDigSub(this,'div')">Divulgação</button>
-          <button class="dig-sub-btn" data-sub="marca" onclick="setDigSub(this,'marca')">Marca CBTH</button>
+          <button class="dig-sub-btn" data-sub="div" onclick="setDigSub(this,'div')">Marca CBTH</button>
         </div>
         <div id="digital-breakdown"></div>
         <div style="margin-top:14px">
           <div class="section-title" style="margin-bottom:5px">Analisar com IA</div>
-          <div style="font-size:11px;color:var(--txt3);line-height:1.5;margin-bottom:8px">Selecione um estado com Instagram. A IA classifica status IG, divulgação e uso da marca CBTH automaticamente.</div>
+          <div style="font-size:11px;color:var(--txt3);line-height:1.5;margin-bottom:8px">Selecione um estado com Instagram. A IA classifica o status do IG e analisa o nível de divulgação dos eventos cadastrados.</div>
           <select class="sel-ai-estado" id="ai-estado-select"><option value="">Selecionar estado...</option></select>
           <button class="ai-analyze-btn" id="ai-btn" onclick="runDigitalAnalysis()">✦ Analisar com IA</button>
           <div class="ai-result" id="ai-result"></div>
@@ -379,18 +391,6 @@ tbody tr:last-child td{border-bottom:none}
       </div>
 
       <!-- Diversidade sidebar -->
-      <div class="sidebar-section" id="sidebar-diversidade" style="display:none">
-        <div class="section-title">Diversidade &amp; Inclusão · 27 Estados</div>
-        <div id="div-breakdown"></div>
-        <div style="margin-top:14px">
-          <div class="section-title" style="margin-bottom:5px">Analisar com IA</div>
-          <div style="font-size:11px;color:var(--txt3);line-height:1.5;margin-bottom:8px">Selecione um estado. A IA pesquisa no Instagram e internet por ações de inclusão, representatividade e diversidade da federação e classifica automaticamente.</div>
-          <select class="sel-ai-estado" id="div-estado-select"><option value="">Selecionar estado...</option></select>
-          <button class="ai-analyze-btn" id="div-ai-btn" onclick="runDiversidadeAnalysis()">✦ Analisar com IA</button>
-          <div class="ai-result" id="div-ai-result"></div>
-        </div>
-      </div>
-
       <!-- CBTH pelo Brasil sidebar -->
       <div class="sidebar-section" id="sidebar-cbth" style="display:none">
         <div class="section-title">CBTH pelo Brasil · 27 Estados</div>
@@ -452,11 +452,67 @@ tbody tr:last-child td{border-bottom:none}
           <thead><tr>
             <th>UF</th><th>Região</th><th>Federação</th><th>Responsável</th>
             <th>E-mail</th><th>WhatsApp</th><th>Instagram</th>
-            <th>Website</th><th>Torneio 1</th><th>Torneio 2</th>
+            <th>Website</th>
           </tr></thead>
           <tbody id="table-body"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAGE: MAPA ═══ -->
+<div class="page" id="page-mapa">
+  <div style="height:calc(100vh - 108px);display:flex;flex-direction:column;overflow:hidden;background:var(--surface)">
+
+    <!-- toolbar -->
+    <div style="padding:10px 20px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0">
+      <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700">🇧🇷 Brasil — Federações Estaduais</span>
+      <div style="width:1px;height:16px;background:var(--border)"></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:var(--txt3);font-weight:500">Visualizar</span>
+        <select id="bmap-viz" onchange="bmapSetViz(this.value)"
+          style="border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:11px;font-family:inherit;background:var(--surface2);color:var(--txt);outline:none">
+          <option value="destaque">⭐ Destaque</option>
+          <option value="cnpj">Status CNPJ</option>
+          <option value="ig">Presença IG</option>
+          <option value="score">Score Geral</option>
+          <option value="eventos">Eventos</option>
+          <option value="banco">Banco Jogadores</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+        <button onclick="bmapZoom(1.3)" style="border:1px solid var(--border);background:var(--surface);border-radius:5px;width:28px;height:28px;font-size:15px;cursor:pointer;color:var(--txt2);display:flex;align-items:center;justify-content:center">+</button>
+        <button onclick="bmapZoom(0.77)" style="border:1px solid var(--border);background:var(--surface);border-radius:5px;width:28px;height:28px;font-size:15px;cursor:pointer;color:var(--txt2);display:flex;align-items:center;justify-content:center">−</button>
+        <button onclick="bmapReset()" style="border:1px solid var(--border);background:var(--surface);border-radius:5px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;color:var(--txt2)">Reset</button>
+      </div>
+    </div>
+
+    <!-- mapa + sidebar -->
+    <div style="display:flex;flex:1;overflow:hidden">
+
+      <!-- mapa canvas -->
+      <div id="bmap-container" style="flex:1;position:relative;overflow:hidden;background:var(--bg)">
+        <svg id="bmap-svg" style="position:absolute;inset:0;width:100%;height:100%;z-index:1"></svg>
+        <div id="bmap-tooltip" style="position:fixed;background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:9px 13px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .12s;z-index:999;min-width:200px;box-shadow:var(--shadow-md)"></div>
+        <div id="bmap-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;background:rgba(247,248,250,0.9)">
+          <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;font-weight:600;color:var(--txt2);display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">🇧🇷</span> Carregando mapa do IBGE…
+          </div>
+        </div>
+        <!-- legenda -->
+        <div id="bmap-legend" style="position:absolute;bottom:12px;left:16px;z-index:5;background:rgba(255,255,255,0.92);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:420px;box-shadow:var(--shadow)"></div>
+      </div>
+
+      <!-- sidebar estados -->
+      <div id="bmap-sidebar" style="width:220px;flex-shrink:0;border-left:1.5px solid var(--border);background:var(--surface2);overflow-y:auto;display:flex;flex-direction:column">
+        <div style="padding:10px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;margin-bottom:2px">27 Estados</div>
+          <div style="font-size:10px;color:var(--txt3)">Passe o mouse para detalhes</div>
+        </div>
+        <div id="bmap-list" style="flex:1;overflow-y:auto;padding:6px 8px"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -466,59 +522,28 @@ tbody tr:last-child td{border-bottom:none}
   <div style="height:calc(100vh - 108px);display:flex;flex-direction:column;overflow:hidden">
 
     <!-- Top bar -->
-    <div style="padding:12px 24px;background:var(--surface);border-bottom:1.5px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0">
-
-      <!-- Month selector view -->
-      <div id="hist-view-months" style="display:flex;flex:1;align-items:center;gap:16px;flex-wrap:wrap">
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--txt)">Histórico Mensal</div>
-        <div id="hist-month-pills" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-          <input type="month" id="hist-new-month" style="border:1px solid var(--border2);border-radius:7px;padding:5px 9px;font-family:inherit;font-size:11px;color:var(--txt);background:var(--surface);outline:none">
-          <button onclick="addHistMes()" style="background:var(--txt);color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">+ Mês</button>
-          <button onclick="snapshotMesAtual()" style="background:var(--surface2);color:var(--txt2);border:1px solid var(--border2);border-radius:7px;padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">⚡ Snapshot atual</button>
-        </div>
+    <div style="padding:10px 20px;background:var(--surface);border-bottom:1.5px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0">
+      <!-- Category buttons -->
+      <div style="display:flex;gap:5px;flex-wrap:wrap" id="hist-cat-btns">
+        <button id="hist-cat-cnpj"      class="hist-cat-btn active" onclick="setHistCat('cnpj')"      style="background:#1D4ED8;color:#fff">CNPJ</button>
+        <button id="hist-cat-ig_status" class="hist-cat-btn"        onclick="setHistCat('ig_status')" >Status IG</button>
+        <button id="hist-cat-div"       class="hist-cat-btn"        onclick="setHistCat('div')"       >Marca CBTH</button>
+        <button id="hist-cat-ativacoes" class="hist-cat-btn"        onclick="setHistCat('ativacoes')" >Eventos</button>
+        <button id="hist-cat-banco_jog" class="hist-cat-btn"        onclick="setHistCat('banco_jog')" >Banco Jog.</button>
       </div>
-
-      <!-- Matrix view header -->
-      <div id="hist-view-matrix-bar" style="display:none;flex:1;align-items:center;gap:10px;flex-wrap:wrap">
-        <button onclick="voltarMeses()" style="background:none;border:1px solid var(--border2);border-radius:7px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;color:var(--txt2);font-family:inherit">← Voltar</button>
-        <span id="hist-matrix-title" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--txt)"></span>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-left:8px" id="hist-cat-btns">
-          <button id="hist-cat-cnpj"      class="hist-cat-btn active" onclick="setHistCat('cnpj')"          style="background:#1D4ED8;color:#fff">CNPJ</button>
-          <button id="hist-cat-ig_status"   class="hist-cat-btn" onclick="setHistCat('ig_status')"            >Status IG</button>
-          <button id="hist-cat-div"       class="hist-cat-btn" onclick="setHistCat('div')"                  >Divulgação</button>
-          <button id="hist-cat-marca"     class="hist-cat-btn" onclick="setHistCat('marca')"                >Marca CBTH</button>
-          <button id="hist-cat-inclusao"  class="hist-cat-btn" onclick="setHistCat('inclusao')"             >Inclusão</button>
-          <button id="hist-cat-cbth_ev_logo"  class="hist-cat-btn" onclick="setHistCat('cbth_ev_logo')"    >Ev. c/ Logo</button>
-          <button id="hist-cat-cbth_atleta"   class="hist-cat-btn" onclick="setHistCat('cbth_atleta')"     >At. Atleta</button>
-          <button id="hist-cat-cbth_palestra" class="hist-cat-btn" onclick="setHistCat('cbth_palestra')"   >Palestras</button>
-          <button id="hist-cat-cbth_start"    class="hist-cat-btn" onclick="setHistCat('cbth_start')"      >Start</button>
-          <button id="hist-cat-banco_jog"     class="hist-cat-btn" onclick="setHistCat('banco_jog')"       >Banco Jog.</button>
-        </div>
-        <div style="margin-left:auto">
-          <button onclick="saveHistorico()" id="hist-save-btn" style="background:#16A34A;color:#fff;border:none;border-radius:7px;padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
-            💾 Salvar
-          </button>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Legend bar (only in matrix view) -->
-    <div id="hist-legend-bar" style="display:none;padding:6px 24px;background:var(--surface2);border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;flex-shrink:0"></div>
-
-    <!-- Month selector content -->
-    <div id="hist-content-months" style="flex:1;overflow-y:auto;padding:28px 32px">
-      <div id="hist-month-cards" style="display:flex;flex-direction:column;gap:10px;max-width:600px"></div>
-      <div id="hist-empty-msg" style="display:none;text-align:center;padding:60px 20px;color:var(--txt3)">
-        <div style="font-size:32px;margin-bottom:12px">📅</div>
-        <div style="font-size:14px;font-weight:600;color:var(--txt2);margin-bottom:6px">Nenhum mês registrado ainda</div>
-        <div style="font-size:12px">Selecione um mês no seletor acima e clique <b>+ Mês</b><br>ou use <b>⚡ Snapshot atual</b> para capturar todos os dados de hoje.</div>
+      <!-- Add month -->
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <input type="month" id="hist-new-month" style="border:1px solid var(--border2);border-radius:7px;padding:5px 9px;font-family:inherit;font-size:11px;color:var(--txt);background:var(--surface);outline:none">
+        <button onclick="addHistMes()" style="background:var(--txt);color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">+ Mês</button>
+        <button onclick="saveHistorico()" style="background:#16A34A;color:#fff;border:none;border-radius:7px;padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">💾 Salvar</button>
       </div>
     </div>
 
-    <!-- Matrix content -->
-    <div id="hist-content-matrix" style="display:none;flex:1;overflow:auto">
+    <!-- Legend bar -->
+    <div id="hist-legend-bar" style="padding:5px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;align-items:center"></div>
+
+    <!-- Multi-month matrix -->
+    <div id="hist-content-matrix" style="flex:1;overflow:auto">
       <table id="hist-matrix" style="border-collapse:collapse;min-width:100%">
         <thead id="hist-thead"></thead>
         <tbody id="hist-tbody"></tbody>
@@ -533,33 +558,33 @@ tbody tr:last-child td{border-bottom:none}
 // DATA
 // ══════════════════════════════════════════════════
 const ESTADOS = [
-  {uf:'AC',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'AL',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'AM',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'AP',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'BA',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'CE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'DF',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'ES',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'GO',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'MA',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'MG',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'MS',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'MT',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'PA',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'PB',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'PE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'PI',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'PR',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'RJ',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'RN',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'RO',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'RR',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'RS',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'SC',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'SE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'SP',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
-  {uf:'TO',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',t1:'',t2:'',inclusao:'',cbth_ev_logo:'nao',cbth_atleta:'nao',cbth_palestra:'nao',cbth_start:'nao',banco_jog:'nao'},
+  {uf:'AC',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'AL',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'AM',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'AP',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'BA',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'CE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'DF',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'ES',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'GO',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'MA',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'MG',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'MS',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'MT',reg:'Centro-Oeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'PA',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'PB',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'PE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'PI',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'PR',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'RJ',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'RN',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'RO',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'RR',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'RS',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'SC',reg:'Sul',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'SE',reg:'Nordeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'SP',reg:'Sudeste',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
+  {uf:'TO',reg:'Norte',nome:'',resp:'',resp_com:'',cnpj:'',email:'',wpp:'',ig:'',ig_status:'',div:'',marca:'',web:'',ativacoes:[],banco_jog:'nao'},
 ];
 
 // ══════════════════════════════════════════════════
@@ -572,6 +597,34 @@ const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 let HISTORICO = [];
 let syncTimer = null;
 let syncStatus = 'idle';
+
+const MONTHS = ['Set','Out','Nov','Dez','Jan','Fev','Mar'];
+
+const CHART_DATA = {
+  destaque: { datasets: [
+    {label:'Avançando (≥60%)', data:[4,5,6,7,8,9,11], color:'#6B7280'},
+    {label:'Iniciando',        data:[8,9,10,10,10,9,9], color:'#CBD5E0'},
+    {label:'Sem dados',        data:[15,13,11,10,9,9,7], color:'#F1F4F8'},
+  ]},
+  gestao: { datasets: [
+    {label:'CNPJ Ativo',    data:[10,11,12,13,13,14,15], color:'#1D4ED8'},
+    {label:'Regularizando', data:[4,4,3,3,3,3,3],        color:'#60A5FA'},
+    {label:'Inativo',       data:[7,7,7,6,6,5,5],        color:'#BFDBFE'},
+  ]},
+  cbth: { datasets: [
+    {label:'Com eventos', data:[2,3,4,5,6,7,8],  color:'#15803D'},
+    {label:'Sem eventos', data:[25,24,23,22,21,20,19], color:'#CBD5E0'},
+  ]},
+  digital: { datasets: [
+    {label:'IG Ativo',       data:[8,9,10,11,12,13,13], color:'#6B21A8'},
+    {label:'IG Inconstante', data:[5,5,5,4,4,4,4],      color:'#A855F7'},
+    {label:'IG Inativo',     data:[6,5,5,5,4,4,4],      color:'#D8B4FE'},
+  ]},
+  banco: { datasets: [
+    {label:'Alimentando',  data:[6,7,8,9,11,12,14], color:'#EA580C'},
+    {label:'Não aliment.', data:[21,20,19,18,16,15,13], color:'#CBD5E0'},
+  ]},
+};
 
 function showSyncStatus(s) {
   syncStatus = s;
@@ -670,55 +723,58 @@ const CNPJ_CFG = {
 
 // ══════════════════════════════════════════════════
 // VIZ LAYERS
+// Calcula pontos de eventos: +1 por evento de 1-2 dias, +2 para 3+ dias
+function calcEventPts(ativacoes) {
+  if (!ativacoes || !ativacoes.length) return 0;
+  return ativacoes.reduce((sum, ev) => {
+    if (!ev.inicio || !ev.fim) return sum + 1; // sem datas = conta como 1 dia → +1
+    const dias = Math.round((new Date(ev.fim) - new Date(ev.inicio)) / 86400000) + 1;
+    return sum + (dias >= 3 ? 2 : 1);
+  }, 0);
+}
+
 // ══════════════════════════════════════════════════
 const VIZ = {
   destaque:{
     label:'Federação Destaque',
     getScore(e){
       let s = 0;
-      // Gestão & Esportividade — 1pt
-      if(e.cnpj==='ativo')      s+=1;
-      // CBTH pelo Brasil — 1pt cada (4 critérios)
-      if(e.cbth_ev_logo==='sim') s+=1;
-      if(e.cbth_atleta==='sim')  s+=1;
-      if(e.cbth_palestra==='sim')s+=1;
-      if(e.cbth_start==='sim')   s+=1;
-      // Presença Digital — 1pt cada
-      if(e.ig_status==='ativo' || e.ig_status==='inconstante') s+=1;
-      if(e.div==='media' || e.div==='alta')  s+=1;
-      if(e.marca==='ativa')      s+=1;
-      // Diversidade & Inclusão — 1pt
-      if(e.inclusao==='acoes')   s+=1;
-      // Banco de Jogadores — 1pt
-      if(e.banco_jog==='sim')    s+=1;
-      return s; // max = 10
+      // Gestão — CNPJ
+      if(e.cnpj==='ativo')              s+=3;
+      else if(e.cnpj==='regularizando') s+=1;
+      // Eventos: +1 por evento 1-2 dias, +2 por evento 3+ dias
+      s += calcEventPts(e.ativacoes);
+      // Presença Digital: IG Ativo +2, Inconstante +1
+      if(e.ig_status==='ativo')        s+=2;
+      else if(e.ig_status==='inconstante') s+=1;
+      if(e.div==='media' || e.div==='alta') s+=1;
+      // Banco de Jogadores
+      if(e.banco_jog==='sim') s+=1;
+      return s;
     },
     getColor(e){
       const s = this.getScore(e);
-      // ≥ 60% = 6.0 pts → arredondamos para s >= 6 como limiar
-      if(s >= 6)  return '#FACC15'; // avançando — amarelo vibrante
-      if(s > 0)   return '#FEF9C3'; // iniciando — amarelo bem clarinho
-      return '#F1F4F8';              // sem dados — cinza clarinho (mantido)
+      if(s >= 6)  return '#6B7280'; // avançando — cinza escuro
+      if(s > 0)   return '#CBD5E0'; // iniciando — cinza médio
+      return '#F1F4F8';              // sem dados — cinza clarinho
     },
     legend:[
       {color:'linear-gradient(135deg,#F5C842,#C8960C)', label:'🥇 País Ouro (top 1)', isGold:true},
       {color:'linear-gradient(135deg,#E8E8E8,#A8A8A8)', label:'🥈 País Prata (top 2)', isSilver:true},
       {color:'linear-gradient(135deg,#CD7F32,#8B4513)', label:'🥉 País Bronze (top 3)', isBronze:true},
-      {color:'#FACC15', label:'Avançando (≥ 60%)'},
-      {color:'#FEF9C3', label:'Iniciando'},
+      {color:'#6B7280', label:'Avançando (≥ 60%)'},
+      {color:'#CBD5E0', label:'Iniciando'},
       {color:'#F1F4F8', label:'Sem dados'},
     ],
     tooltip(e){
       const s = VIZ.destaque.getScore(e);
-      const pct = Math.round(s/10*100);
+      const pct = Math.round(s/9*100);
       // Medal based on ranking, not score threshold — tooltip just shows score
       return[
-        {key:'Score',       val:`${s}/10 pontos (${pct}%)`, ok:pct>=60},
+        {key:'Score',       val:`${s}/9 pontos (${Math.round(s/9*100)}%)`, ok:s>=5},
         {key:'CNPJ',        val:e.cnpj==='ativo'?'Ativo':e.cnpj||'—',          ok:e.cnpj==='ativo'},
         {key:'Resp. Com.',  val:e.resp_com?'✓ Designado':'—',                   ok:!!e.resp_com},
-        {key:'CBTH ações',  val:[e.cbth_ev_logo,e.cbth_atleta,e.cbth_palestra,e.cbth_start].filter(v=>v==='sim').length+'/4', ok:true},
-        {key:'Presença IG', val:e.ig_status||'—',                               ok:e.ig_status==='ativo'},
-        {key:'Diversidade', val:e.inclusao==='acoes'?'Sim':'—',                 ok:e.inclusao==='acoes'},
+                {key:'Presença IG', val:e.ig_status||'—',                               ok:e.ig_status==='ativo'},
         {key:'Banco Jog.',  val:e.banco_jog==='sim'?'✓ Sim':'—',               ok:e.banco_jog==='sim'},
       ];
     },
@@ -758,30 +814,13 @@ const VIZ = {
     tooltip(e){return[
       {key:'Instagram',   val:e.ig||'—',                                                             ok:!!e.ig},
       {key:'Status IG',   val:e.ig_status||'não analisado',                                          ok:e.ig_status==='ativo'},
-      {key:'Divulgação',  val:e.div||'—',                                                             ok:['media','alta'].includes(e.div)},
-      {key:'Marca CBTH',  val:e.marca||'—',                                                           ok:e.marca==='ativa'},
-    ]},
-  },
-  diversidade:{
-    label:'Diversidade & Inclusão',
-    getColor(e){
-      if(e.inclusao==='acoes')     return '#EA580C'; // laranja forte
-      if(e.inclusao==='sem_acoes') return '#FED7AA'; // laranja claro
-      return '#E5E7EB';                               // não avaliado
-    },
-    legend:[
-      {color:'#EA580C', label:'Ações Inclusivas'},
-      {color:'#FED7AA', label:'Sem ações registradas'},
-      {color:'#E5E7EB', label:'Não avaliado'},
-    ],
-    tooltip(e){return[
-      {key:'Inclusão', val:e.inclusao==='acoes'?'Ações Inclusivas':e.inclusao==='sem_acoes'?'Sem ações':'Não avaliado', ok:e.inclusao==='acoes'},
+      {key:'Marca CBTH',  val:e.div||'—',                                                             ok:['media','alta'].includes(e.div)},
     ]},
   },
   cbth:{
     label:'CBTH pelo Brasil',
     getColor(e){
-      const score = [e.cbth_ev_logo==='sim',e.cbth_atleta==='sim',e.cbth_palestra==='sim',e.cbth_start==='sim'].filter(Boolean).length;
+      const score = [!!(e.ativacoes&&e.ativacoes.length)].filter(Boolean).length;
       if(score===4) return '#15803D'; // all 4
       if(score===3) return '#16A34A';
       if(score===2) return '#4ADE80';
@@ -796,20 +835,17 @@ const VIZ = {
       {color:'#E2E8F0',label:'Nenhuma ação registrada'},
     ],
     tooltip(e){return[
-      {key:'Evento logo', val:e.cbth_ev_logo==='sim'?'✓ Sim':'Não registrado', ok:e.cbth_ev_logo==='sim'},
-      {key:'At. atleta',  val:e.cbth_atleta==='sim'?'✓ Sim':'Não registrado',  ok:e.cbth_atleta==='sim'},
-      {key:'Palestras',   val:e.cbth_palestra==='sim'?'✓ Sim':'Não registrado',ok:e.cbth_palestra==='sim'},
-      {key:'Start',       val:e.cbth_start==='sim'?'✓ Sim':'Não registrado',   ok:e.cbth_start==='sim'},
-    ]},
+            {key:'Eventos',   val:e.ativacoes&&e.ativacoes.length?e.ativacoes.length+' evento(s)':'Não registrado', ok:!!(e.ativacoes&&e.ativacoes.length)},
+          ]},
   },
   banco:{
     label:'Banco de Dados',
     getColor(e){
-      if(e.banco_jog==='sim') return '#78350F'; // marrom escuro
+      if(e.banco_jog==='sim') return '#EA580C'; // marrom escuro
       return '#E5E7EB';                          // sem dados
     },
     legend:[
-      {color:'#78350F',label:'Alimentando o banco de jogadores'},
+      {color:'#EA580C',label:'Alimentando o banco de jogadores'},
       {color:'#E5E7EB',label:'Não alimentando'},
     ],
     tooltip(e){
@@ -937,7 +973,13 @@ function renderMap() {
     const mapRanked = [...ESTADOS]
       .filter(e => e.nome && CENTROIDS[e.uf])
       .map(e => ({...e, score: VIZ.destaque.getScore(e)}))
-      .sort((a,b) => b.score - a.score);
+      .sort((a,b) => {
+        const cnpjOrder = {ativo:2,regularizando:1,inativo:0,seminfo:0,'':0};
+        const ca = cnpjOrder[a.cnpj||''] ?? 0;
+        const cb = cnpjOrder[b.cnpj||''] ?? 0;
+        if (cb !== ca) return cb - ca;
+        return b.score - a.score;
+      });
 
     function mapCompRank(i) {
       let pos = 1;
@@ -947,7 +989,16 @@ function renderMap() {
       return pos;
     }
     function mapMedalFed(rank) {
-      const feds = mapRanked.filter((e,i) => mapCompRank(i) === rank);
+      // Only CNPJ ativo federations are eligible for top 3
+      const eligible = mapRanked.filter(e => e.cnpj === 'ativo');
+      function eligibleRank(i) {
+        let pos = 1;
+        for (let j = 0; j < i; j++) {
+          if (eligible[j].score > eligible[i].score) pos++;
+        }
+        return pos;
+      }
+      const feds = eligible.filter((e, i) => eligibleRank(i) === rank);
       return (feds.length === 1 && feds[0].score > 0) ? feds[0] : null;
     }
     const mapGold   = mapMedalFed(1);
@@ -1006,7 +1057,7 @@ function renderMap() {
   }
 
   // Legend — digital mode uses sub-specific legend
-  const legendItems = (['digital','diversidade'].includes(activeViz) && viz.getLegend) ? viz.getLegend() : viz.legend;
+  const legendItems = (['digital'].includes(activeViz) && viz.getLegend) ? viz.getLegend() : viz.legend;
   document.getElementById('map-legend').innerHTML = legendItems.map(l =>
     l.emoji
       ? `<div class="legend-item"><span style="font-size:13px">${l.label.split(' ')[0]}</span><span>${l.label.split(' ').slice(1).join(' ')}</span></div>`
@@ -1058,12 +1109,12 @@ function showSidebarFor(viz) {
   document.getElementById('sidebar-gestao').style.display      = viz==='gestao'      ? '' : 'none';
   document.getElementById('sidebar-cbth').style.display        = viz==='cbth'        ? '' : 'none';
   document.getElementById('sidebar-digital').style.display     = viz==='digital'     ? '' : 'none';
-  document.getElementById('sidebar-diversidade').style.display = viz==='diversidade' ? '' : 'none';
+  document.getElementById('sidebar-diversidade') && (document.getElementById('sidebar-diversidade').style.display = 'none');
   document.getElementById('sidebar-banco').style.display       = viz==='banco'       ? '' : 'none';
   if (viz==='destaque')    renderDestaqueRanking();
   if (viz==='digital')     renderDigitalBreakdown();
   if (viz==='gestao')      renderCnpjAccordion();
-  if (viz==='diversidade') renderDiversidadeBreakdown();
+  
   if (viz==='cbth')        renderCbthBreakdown();
   if (viz==='banco')       renderBancoJogSummary();
 }
@@ -1167,7 +1218,7 @@ function renderCnpjAccordion() {
   });
 }
 
-let activeDigSub = 'ig_status'; // 'ig_status' | 'div' | 'marca'
+let activeDigSub = 'ig_status'; // 'ig_status' | 'div'
 
 function setDigSub(btn, sub) {
   document.querySelectorAll('.dig-sub-btn').forEach(b=>b.classList.remove('active'));
@@ -1193,11 +1244,7 @@ VIZ.digital.getColor = function(e) {
     if(e.div==='sem')    return '#F3E8FF';
     return '#E5E7EB';
   }
-  if (activeDigSub === 'marca') {
-    if(e.marca==='ativa')   return '#6B21A8';
-    if(e.marca==='inativa') return '#D8B4FE';
-    return '#E5E7EB';
-  }
+  return '#E5E7EB';
   return '#E5E7EB';
 };
 
@@ -1217,11 +1264,7 @@ VIZ.digital.getLegend = function() {
     {color:'#F3E8FF',label:'Sem divulgação'},
     {color:'#E5E7EB',label:'Não avaliado'},
   ];
-  if (activeDigSub === 'marca') return [
-    {color:'#6B21A8',label:'Marca CBTH Ativa'},
-    {color:'#D8B4FE',label:'Marca CBTH Inativa'},
-    {color:'#E5E7EB',label:'Não avaliado'},
-  ];
+
   return [];
 };
 
@@ -1243,11 +1286,7 @@ function renderDigitalBreakdown() {
       {val:'sem',   label:'Sem divulgação',   color:'#F3E8FF', list:ESTADOS.filter(e=>e.div==='sem')},
       {val:'',      label:'Não avaliado',     color:'#E5E7EB', list:ESTADOS.filter(e=>!e.div)},
     ],
-    marca: [
-      {val:'ativa',   label:'Marca CBTH Ativa',   color:'#6B21A8', list:ESTADOS.filter(e=>e.marca==='ativa')},
-      {val:'inativa', label:'Marca CBTH Inativa',  color:'#D8B4FE', list:ESTADOS.filter(e=>e.marca==='inativa')},
-      {val:'',        label:'Não avaliado',         color:'#E5E7EB', list:ESTADOS.filter(e=>!e.marca)},
-    ],
+
   };
 
   const rows = DIG_ROWS[activeDigSub] || [];
@@ -1308,7 +1347,7 @@ Instagram: ${estado.ig}
 Website: ${estado.web||'não informado'}
 
 Retorne SOMENTE um JSON válido sem markdown:
-{"ig_status":"ativo"|"inconstante"|"inativo","ig_just":"breve razão","div":"sem"|"baixa"|"media"|"alta","div_just":"breve razão","marca":"ativa"|"inativa","marca_just":"breve razão","resumo":"2 frases de análise geral"}`;
+{"ig_status":"ativo"|"inconstante"|"inativo","ig_just":"breve razão em 1 frase","div":"sem"|"baixa"|"media"|"alta","div_just":"breve razão em 1 frase","resumo":"2 frases de análise geral"}`;
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
@@ -1322,7 +1361,6 @@ Retorne SOMENTE um JSON válido sem markdown:
     const idx = ESTADOS.indexOf(estado);
     ESTADOS[idx].ig_status = p.ig_status||'';
     ESTADOS[idx].div       = p.div||'';
-    ESTADOS[idx].marca     = p.marca||'';
     saveData(); renderMap(); renderDigitalBreakdown();
 
     const igColor = p.ig_status==='ativo'?'#16A34A':p.ig_status==='inconstante'?'#F59E0B':'#EF4444';
@@ -1330,7 +1368,6 @@ Retorne SOMENTE um JSON válido sem markdown:
       <div style="font-weight:600;color:var(--txt);margin-bottom:6px">${uf} · Análise IA</div>
       <div style="margin-bottom:3px"><span style="color:var(--txt3)">IG:</span> <b style="color:${igColor}">${p.ig_status}</b> — ${p.ig_just}</div>
       <div style="margin-bottom:3px"><span style="color:var(--txt3)">Divulgação:</span> <b>${p.div}</b> — ${p.div_just}</div>
-      <div style="margin-bottom:8px"><span style="color:var(--txt3)">Marca CBTH:</span> <b style="color:${p.marca==='ativa'?'#16A34A':'#EF4444'}">${p.marca}</b> — ${p.marca_just}</div>
       <div style="border-top:1px solid var(--border);padding-top:6px;color:var(--txt2)">${p.resumo}</div>
       <div style="margin-top:5px;font-size:10px;color:var(--txt3)">✓ Salvo automaticamente</div>`;
   } catch(err) {
@@ -1340,177 +1377,155 @@ Retorne SOMENTE um JSON válido sem markdown:
 }
 
 // ══════════════════════════════════════════════════
-// DIVERSIDADE & INCLUSÃO
+// ATUALIZAÇÃO GERAL — análise em lote de todos os IGs
 // ══════════════════════════════════════════════════
-function renderDiversidadeBreakdown() {
-  const total = 27;
-  const comAcoes    = ESTADOS.filter(e=>e.inclusao==='acoes').length;
-  const semAcoes    = ESTADOS.filter(e=>e.inclusao==='sem_acoes').length;
-  const naoAval     = total - comAcoes - semAcoes;
 
-  const rows = [
-    {val:'acoes',     label:'Ações Inclusivas',       color:'#EA580C', list: ESTADOS.filter(e=>e.inclusao==='acoes')},
-    {val:'sem_acoes', label:'Sem ações registradas',  color:'#FED7AA', list: ESTADOS.filter(e=>e.inclusao==='sem_acoes')},
-    {val:'',          label:'Não avaliado',            color:'#E5E7EB', list: ESTADOS.filter(e=>!e.inclusao)},
+async function analisarIGEstado(estado) {
+  // Build event list from estadual, ativacoes, inclusoes
+  const allEvts = [
+    ...(estado.ativacoes||[]).map(e=>e.nome).filter(Boolean),
   ];
+  const evtStr = allEvts.length
+    ? `Eventos cadastrados: ${allEvts.join(', ')}.`
+    : 'Nenhum evento específico cadastrado.';
 
-  const el = document.getElementById('div-breakdown');
-  el.innerHTML = `
-    <div style="display:flex;gap:6px;margin-bottom:12px">
-      <div style="flex:1;background:#FFF7ED;border:1px solid #FDBA74;border-radius:8px;padding:10px 12px;text-align:center">
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#EA580C">${comAcoes}</div>
-        <div style="font-size:10px;color:#9A3412;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Com ações</div>
-      </div>
-      <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--txt3)">${semAcoes}</div>
-        <div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Sem ações</div>
-      </div>
-      <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#C4B5FD">${naoAval}</div>
-        <div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Não avaliado</div>
-      </div>
-    </div>
-  ` + rows.map(r => `
-    <div class="cnpj-accordion" style="margin-bottom:5px">
-      <div class="cnpj-acc-header" onclick="
-        var dd=this.parentElement.querySelector('.cnpj-dropdown');
-        var ch=this.parentElement.querySelector('.cnpj-chevron');
-        var open=dd.style.display==='block';
-        document.querySelectorAll('#div-breakdown .cnpj-dropdown').forEach(d=>d.style.display='none');
-        document.querySelectorAll('#div-breakdown .cnpj-chevron').forEach(ch=>ch.style.transform='');
-        if(!open){dd.style.display='block';ch.style.transform='rotate(180deg)';}">
-        <div class="cnpj-acc-left">
-          <div class="cnpj-dot" style="background:${r.color}"></div>
-          <div>
-            <div class="cnpj-name">${r.label}</div>
-            <div class="cnpj-bar-wrap"><div class="cnpj-bar-inner" style="background:${r.color};width:${Math.round(r.list.length/total*100)}%"></div></div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span class="cnpj-count" style="color:${r.color}">${r.list.length}</span>
-          <svg class="cnpj-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="transition:transform .2s;color:var(--txt3)"><path d="M2 4.5L6 8L10 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </div>
-      </div>
-      <div class="cnpj-dropdown">
-        ${r.list.length===0
-          ? '<div class="cnpj-dd-row" style="color:var(--txt3)">Nenhum estado neste status</div>'
-          : r.list.map(e=>`<div class="cnpj-dd-row">
-              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
-              <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
-              ${e.inclusao_obs?`<span style="font-size:10px;color:var(--txt3);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.inclusao_obs}">📝</span>`:''}
-            </div>`).join('')
-        }
-      </div>
-    </div>
-  `).join('');
+  const prompt = `Você é analista de presença digital esportiva. Analise a federação de handball do estado ${estado.uf} (${estado.nome||'sem nome'}).
+Instagram: ${estado.ig}
+Website: ${estado.web||'não informado'}
+${evtStr}
 
-  // Populate select with all evaluated states
-  const sel = document.getElementById('div-estado-select');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">Selecionar estado...</option>' +
-    ESTADOS.filter(e=>e.nome).map(e=>`<option value="${e.uf}" ${e.uf===cur?'selected':''}>${e.uf} — ${e.nome||'Sem nome'}${e.ig?' (IG: '+e.ig+')':''}</option>`).join('');
-}
-
-async function runDiversidadeAnalysis() {
-  const sel = document.getElementById('div-estado-select');
-  const uf = sel.value;
-  if (!uf) { alert('Selecione um estado para analisar.'); return; }
-  const estado = ESTADOS.find(e=>e.uf===uf);
-  if (!estado) return;
-
-  const btn    = document.getElementById('div-ai-btn');
-  const result = document.getElementById('div-ai-result');
-  btn.disabled = true; btn.textContent = '⟳ Pesquisando...';
-  result.style.display = 'block';
-  result.innerHTML = '<span style="color:var(--txt3)">A IA está pesquisando ações de inclusão e diversidade desta federação...</span>';
-
-  const prompt = `Você é analista de diversidade e inclusão esportiva no Brasil. Analise a federação de handball do estado ${uf}: "${estado.nome||'sem nome registrado'}".
-
-Dados disponíveis:
-- Instagram: ${estado.ig||'não informado'}
-- Website: ${estado.web||'não informado'}
-- Estado: ${uf}
-
-Pesquise e avalie se esta federação realiza AÇÕES DE INCLUSÃO E REPRESENTATIVIDADE, considerando:
-1. Projetos para populações sub-representadas (mulheres, LGBTQIA+, pessoas com deficiência, comunidades carentes, indígenas, etc.)
-2. Campanhas de representatividade e diversidade
-3. Eventos inclusivos, torneios mistos, categorias adaptadas
-4. Parcerias com organizações sociais ou ONGs
-5. Comunicação inclusiva nas redes sociais
-6. Programas de base em comunidades periféricas
+Pesquise o perfil do Instagram e, se houver eventos cadastrados, pesquise também cada evento na internet.
+Avalie: (1) status do IG — frequência de posts, data do último post; (2) nível de divulgação dos eventos — se aparecem no IG, site próprio, notícias, redes sociais, etc.
 
 Retorne SOMENTE um JSON válido sem markdown:
-{"inclusao":"acoes"|"sem_acoes","nivel":"baixo"|"medio"|"alto","acoes_encontradas":["ação 1","ação 2"],"obs":"resumo em 2 frases do que foi encontrado ou não encontrado","fontes":"onde você buscou a informação"}`;
+{"ig_status":"ativo"|"inconstante"|"inativo","ig_just":"breve razão em 1 frase","div":"sem"|"baixa"|"media"|"alta","div_just":"breve razão em 1 frase"}`;
 
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:1000,
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-    const data = await resp.json();
-    // Extract text from response (may contain tool use blocks)
-    const textBlock = data.content?.find(b=>b.type==='text');
-    const text = textBlock?.text || '';
-    const clean = text.replace(/```json|```/g,'').trim();
-    const p = JSON.parse(clean);
-
-    const idx = ESTADOS.indexOf(estado);
-    ESTADOS[idx].inclusao     = p.inclusao||'';
-    ESTADOS[idx].inclusao_obs = p.obs||'';
-    saveData(); renderMap(); renderDiversidadeBreakdown();
-
-    const cor = p.inclusao==='acoes' ? '#9A3412' : '#9CA3AF';
-    const label = p.inclusao==='acoes' ? 'Ações Inclusivas' : 'Sem ações registradas';
-    const acoesHtml = (p.acoes_encontradas||[]).length > 0
-      ? '<ul style="margin:4px 0 0 12px;padding:0">' + p.acoes_encontradas.map(a=>`<li style="margin-bottom:2px">${a}</li>`).join('') + '</ul>'
-      : '<span style="color:var(--txt3)">Nenhuma ação encontrada</span>';
-
-    result.innerHTML = `
-      <div style="font-weight:600;color:var(--txt);margin-bottom:6px">${uf} · Análise de Inclusão</div>
-      <div style="margin-bottom:6px">
-        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:${p.inclusao==='acoes'?'#FFF7ED':'#F3F4F6'};color:${cor}">
-          ${p.inclusao==='acoes'?'✦':''} ${label}${p.nivel?' · nível '+p.nivel:''}
-        </span>
-      </div>
-      <div style="font-size:11px;color:var(--txt3);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Ações encontradas:</div>
-      <div style="font-size:11px;color:var(--txt2);margin-bottom:8px">${acoesHtml}</div>
-      <div style="border-top:1px solid var(--border);padding-top:6px;color:var(--txt2);font-size:11px">${p.obs}</div>
-      ${p.fontes?`<div style="margin-top:4px;font-size:10px;color:var(--txt3)">🔍 ${p.fontes}</div>`:''}
-      <div style="margin-top:5px;font-size:10px;color:var(--txt3)">✓ Salvo automaticamente</div>`;
-  } catch(err) {
-    result.innerHTML = `<span style="color:var(--red)">Erro na análise: ${err.message}</span>`;
-  }
-  btn.disabled=false; btn.textContent='✦ Analisar com IA';
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 400,
+      tools: [{type: 'web_search_20250305', name: 'web_search'}],
+      messages: [{role: 'user', content: prompt}]
+    })
+  });
+  const data = await resp.json();
+  const textBlock = data.content?.find(b => b.type === 'text');
+  const text = textBlock?.text || '';
+  return JSON.parse(text.replace(/```json|```/g, '').trim());
 }
 
+let _atualizandoGeral = false;
+
+async function atualizarGeral() {
+  if (_atualizandoGeral) return;
+  _atualizandoGeral = true;
+
+  const btn   = document.getElementById('btn-atualizar-geral');
+  const icon  = document.getElementById('btn-atualizar-icon');
+  const label = document.getElementById('btn-atualizar-label');
+
+  // Mês atual — só este pode ser atualizado automaticamente
+  const mesAtual = new Date().toISOString().slice(0, 7); // ex: "2025-04"
+
+  const comIG = ESTADOS.filter(e => e.ig && e.ig.trim());
+  if (!comIG.length) {
+    label.textContent = 'Nenhum IG cadastrado';
+    setTimeout(() => { label.textContent = 'Atualizar Dados'; _atualizandoGeral = false; }, 2500);
+    return;
+  }
+
+  btn.disabled = true;
+  icon.style.display = 'inline-block';
+  icon.style.animation = 'spin 1s linear infinite';
+
+  if (!document.getElementById('spin-style')) {
+    const s = document.createElement('style');
+    s.id = 'spin-style';
+    s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+  }
+
+  let done = 0, erros = 0;
+  label.textContent = `0 / ${comIG.length} — ${mesAtual}`;
+
+  for (const estado of comIG) {
+    label.textContent = `${done} / ${comIG.length} — ${estado.uf}`;
+    try {
+      const p = await analisarIGEstado(estado);
+
+      // ── Atualiza APENAS o registro do mês atual no Histórico ──
+      let row = HISTORICO.find(r => r.uf === estado.uf && r.mes === mesAtual);
+      if (!row) {
+        // Cria registro novo para o mês atual se ainda não existe
+        row = {
+          mes: mesAtual, uf: estado.uf, nome: estado.nome||'', resp_com: estado.resp_com||'',
+          cnpj: estado.cnpj||'', ig_status:'', div:'',
+          ativacoes: estado.ativacoes||[], banco_jog: estado.banco_jog||'nao'
+        };
+        HISTORICO.push(row);
+      }
+      // Grava só os campos automáticos — nunca toca em dados manuais de meses passados
+      if (p.ig_status) row.ig_status = p.ig_status;
+      if (p.div)       row.div       = p.div;
+
+      // Reflete no objeto ESTADOS também (estado "atual" da dash)
+      const idx = ESTADOS.indexOf(estado);
+      if (p.ig_status) ESTADOS[idx].ig_status = p.ig_status;
+      if (p.div)       ESTADOS[idx].div       = p.div;
+
+      done++;
+    } catch(e) {
+      erros++;
+      done++;
+    }
+    saveData();
+    renderMap();
+    if (activeViz === 'digital') renderDigitalBreakdown();
+    await new Promise(r => setTimeout(r, 800));
+  }
+
+  // Persiste histórico e atualiza gráfico
+  saveHistorico();
+  updateChartFromHistorico();
+
+  icon.style.animation = '';
+  icon.textContent = erros === 0 ? '✓' : '⚠';
+  label.textContent = erros === 0
+    ? `${done} IGs atualizados (${mesAtual})`
+    : `${done - erros} ok, ${erros} erros`;
+
+  setTimeout(() => {
+    icon.textContent = '⟳';
+    icon.style.animation = '';
+    label.textContent = 'Atualizar Dados';
+    btn.disabled = false;
+    _atualizandoGeral = false;
+  }, 4000);
+}
+
+// ══════════════════════════════════════════════════
 // ══════════════════════════════════════════════════
 // CBTH PELO BRASIL
 // ══════════════════════════════════════════════════
 const CBTH_CRITERIOS = [
-  {field:'cbth_ev_logo',  label:'Evento Anual c/ Logo CBTH', color:'#15803D', icon:'🏆'},
-  {field:'cbth_atleta',   label:'Ativação com Atleta',        color:'#0891B2', icon:'🏅'},
-  {field:'cbth_palestra', label:'Palestras & Painéis',        color:'#7C3AED', icon:'🎤'},
-  {field:'cbth_start',    label:'Evento Start (iniciantes)',  color:'#EA580C', icon:'🚀'},
+  {field:'ativacoes',     label:'Eventos',                     color:'#15803D', icon:'🏅', isEvents:true},
 ];
 
 function renderCbthBreakdown() {
   const total = 27;
   const el = document.getElementById('cbth-breakdown');
 
-  // Score summary tiles
-  const scores = [0,1,2,3,4].map(n => ({
-    n, count: ESTADOS.filter(e => CBTH_CRITERIOS.filter(cr=>e[cr.field]==='sim').length === n).length
-  }));
-  const scoreColors = {0:'#E2E8F0', 1:'#BBF7D0', 2:'#4ADE80', 3:'#16A34A', 4:'#15803D'};
-
   el.innerHTML = CBTH_CRITERIOS.map(cr => {
-    const com    = ESTADOS.filter(e=>e[cr.field]==='sim');
-    const sem    = ESTADOS.filter(e=>e[cr.field]==='nao');
-    const naoAv  = ESTADOS.filter(e=>!e[cr.field]);
+    let com, sem;
+    if (cr.isEvents) {
+      com = ESTADOS.filter(e => Array.isArray(e[cr.field]) && e[cr.field].length > 0);
+      sem = ESTADOS.filter(e => !Array.isArray(e[cr.field]) || e[cr.field].length === 0);
+    } else {
+      com = ESTADOS.filter(e => e[cr.field]==='sim');
+      sem = ESTADOS.filter(e => e[cr.field]!=='sim');
+    }
     return `
     <div class="cnpj-accordion" style="margin-bottom:5px">
       <div class="cnpj-acc-header" onclick="
@@ -1526,14 +1541,14 @@ function renderCbthBreakdown() {
             <div class="cnpj-name">${cr.label}</div>
             <div style="display:flex;gap:6px;margin-top:3px;align-items:center">
               <div style="width:70px;height:4px;background:var(--border);border-radius:99px;overflow:hidden">
-                <div style="height:100%;background:var(--txt3);width:${Math.round(com.length/total*100)}%;border-radius:99px"></div>
+                <div style="height:100%;background:${cr.color};width:${Math.round(com.length/total*100)}%;border-radius:99px"></div>
               </div>
               <span style="font-size:10px;color:var(--txt3)">${com.length}/${total}</span>
             </div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:6px">
-          <span class="cnpj-count" style="color:var(--txt3)">${com.length}</span>
+          <span class="cnpj-count" style="color:${cr.color}">${com.length}</span>
           <svg class="cnpj-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="transition:transform .2s;color:var(--txt3)"><path d="M2 4.5L6 8L10 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         </div>
       </div>
@@ -1543,11 +1558,16 @@ function renderCbthBreakdown() {
         </div>
         ${com.length===0
           ? '<div class="cnpj-dd-row" style="color:var(--txt3)">Nenhum estado</div>'
-          : com.map(e=>`<div class="cnpj-dd-row">
-              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
-              <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
-              <span style="font-size:10px;color:${cr.color};font-weight:600">✓</span>
-            </div>`).join('')
+          : com.map(e=>{
+              const evts = cr.isEvents && Array.isArray(e[cr.field]) ? e[cr.field] : [];
+              const evDetail = evts.length ? evts.map(ev=>`<span style="font-size:10px;color:var(--txt3);display:block;margin-left:26px">${ev.nome||''}${ev.inicio?' · '+ev.inicio:''}${ev.fim?'→'+ev.fim:''}${ev.categoria?' ('+ev.categoria+')':''}</span>`).join('') : '';
+              return `<div class="cnpj-dd-row" style="flex-wrap:wrap">
+                <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--txt);min-width:26px">${e.uf}</span>
+                <span style="color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome||'—'}</span>
+                <span style="font-size:10px;color:${cr.color};font-weight:600">${evts.length ? evts.length+'ev.' : '✓'}</span>
+                ${evDetail}
+              </div>`;
+            }).join('')
         }
         ${sem.length > 0 ? `
         <div style="padding:6px 10px 4px;border-bottom:1px solid var(--border);border-top:1px solid var(--border)">
@@ -1562,7 +1582,6 @@ function renderCbthBreakdown() {
     </div>`;
   }).join('');
 
-  // Populate estado select
   const sel = document.getElementById('cbth-estado-select');
   const cur = sel.value;
   sel.innerHTML = '<option value="">Selecionar estado...</option>' +
@@ -1598,8 +1617,7 @@ Pesquise na internet (redes sociais, sites, notícias) por evidências destas 4 
 
 Retorne SOMENTE um JSON válido sem markdown:
 {
-  "ev_logo": "sim"|"nao",
-  "ev_logo_ev": "nome do evento encontrado ou vazio",
+    
   "atleta": "sim"|"nao",
   "atleta_ev": "detalhes encontrados ou vazio",
   "palestra": "sim"|"nao",
@@ -1625,10 +1643,9 @@ Retorne SOMENTE um JSON válido sem markdown:
     const p = JSON.parse(text.replace(/```json|```/g,'').trim());
 
     const idx = ESTADOS.indexOf(estado);
-    ESTADOS[idx].cbth_ev_logo  = p.ev_logo  || 'nao';
-    ESTADOS[idx].cbth_atleta   = p.atleta   || 'nao';
-    ESTADOS[idx].cbth_palestra = p.palestra || 'nao';
-    ESTADOS[idx].cbth_start    = p.start    || 'nao';
+    // estadual: array gerenciado manualmente, IA não sobrescreve
+    // ativacoes: kept as-is from existing data (IA doesn't overwrite event list)
+    // inclusoes: array gerenciado manualmente, IA não sobrescreve
     saveData(); renderMap(); renderCbthBreakdown();
 
     const mkRow = (label, icon, val, ev) =>
@@ -1643,11 +1660,8 @@ Retorne SOMENTE um JSON válido sem markdown:
 
     result.innerHTML = `
       <div style="font-weight:600;color:var(--txt);margin-bottom:8px">${uf} · Ações CBTH pelo Brasil</div>
-      ${mkRow('Evento Anual c/ Logo','🏆',p.ev_logo,p.ev_logo_ev)}
-      ${mkRow('Ativação com Atleta','🏅',p.atleta,p.atleta_ev)}
-      ${mkRow('Palestras & Painéis','🎤',p.palestra,p.palestra_ev)}
-      ${mkRow('Evento Start','🚀',p.start,p.start_ev)}
-      <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;color:var(--txt2);font-size:11px">${p.resumo}</div>
+            ${mkRow('Ativação com Atleta','🏅',p.atleta,p.atleta_ev)}
+            <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;color:var(--txt2);font-size:11px">${p.resumo}</div>
       ${p.fontes?`<div style="margin-top:4px;font-size:10px;color:var(--txt3)">🔍 ${p.fontes}</div>`:''}
       <div style="margin-top:5px;font-size:10px;color:var(--txt3)">✓ Salvo automaticamente</div>`;
   } catch(err) {
@@ -1662,9 +1676,15 @@ Retorne SOMENTE um JSON válido sem markdown:
 function renderDestaqueRanking() {
   const MAX = 10;
 
+  const cnpjOrder = {ativo:2,regularizando:1,inativo:0,seminfo:0,'':0};
   const all27 = ESTADOS
     .map(e => ({...e, score: VIZ.destaque.getScore(e)}))
-    .sort((a,b) => b.score - a.score);
+    .sort((a,b) => {
+      const ca = cnpjOrder[a.cnpj||''] ?? 0;
+      const cb = cnpjOrder[b.cnpj||''] ?? 0;
+      if (cb !== ca) return cb - ca;
+      return b.score - a.score;
+    });
 
   // Only federations with a name participate in ranking
   const ranked = all27.filter(e => e.nome);
@@ -1686,9 +1706,17 @@ function renderDestaqueRanking() {
   }
 
   // A medal position is valid only if exactly ONE federation holds that rank
+  // RULE: only CNPJ ativo federations are eligible for top 3
+  const eligibleTop3 = ranked.filter(e => e.cnpj === 'ativo');
+  function eligibleRank(i) {
+    let pos = 1;
+    for (let j = 0; j < i; j++) {
+      if (eligibleTop3[j].score > eligibleTop3[i].score) pos++;
+    }
+    return pos;
+  }
   function medalRank(rank) {
-    // rank 1, 2, or 3 — only award if exactly one fed at that position
-    const feds = ranked.filter((e, i) => compRank(i) === rank);
+    const feds = eligibleTop3.filter((e, i) => eligibleRank(i) === rank);
     if (feds.length !== 1) return null;
     if (feds[0].score === 0) return null;
     return feds[0];
@@ -1713,7 +1741,7 @@ function renderDestaqueRanking() {
   };
 
   const tier = (s) => {
-    if(s>=6) return {color:'#6B7280'};
+    if(s>=5) return {color:'#6B7280'};
     if(s>0)  return {color:'#CBD5E0'};
     return   {color:'#F1F4F8'};
   };
@@ -1832,10 +1860,10 @@ function renderBancoJogSummary() {
   el.innerHTML = `
     <!-- Progress bar -->
     <div style="height:5px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:12px">
-      <div style="height:100%;background:linear-gradient(90deg,#78350F,#B45309);border-radius:99px;width:${pctSim}%;transition:width .6s cubic-bezier(.4,0,.2,1)"></div>
+      <div style="height:100%;background:linear-gradient(90deg,#EA580C,#F97316);border-radius:99px;width:${pctSim}%;transition:width .6s cubic-bezier(.4,0,.2,1)"></div>
     </div>
 
-    ${mkAccordion('bj-sim','#FEF3E2','#D97706','#78350F',sim.length,pctSim,'✓ Alimentando o banco',mkRows(sim,'✅'))}
+    ${mkAccordion('bj-sim','#FEF3E2','#D97706','#EA580C',sim.length,pctSim,'✓ Alimentando o banco',mkRows(sim,'✅'))}
     ${mkAccordion('bj-nao','var(--surface2)','var(--border)','var(--txt3)',nao.length,pctNao,'✗ Não alimentando',mkRows(nao,'⬜'))}
   `;
 }
@@ -1890,8 +1918,6 @@ function renderTable() {
       <td>${ed(idx,'wpp',e.wpp)}</td>
       <td>${ed(idx,'ig',e.ig)}</td>
       <td>${ed(idx,'web',e.web)}</td>
-      <td>${ed(idx,'t1',e.t1)}</td>
-      <td>${ed(idx,'t2',e.t2)}</td>
     </tr>`;
   }).join('');
 
@@ -1966,55 +1992,254 @@ loadData().then(() => {
 window.addEventListener('resize',()=>{ if(document.getElementById('page-federacoes').classList.contains('active'))renderMap(); });
 
 // ══════════════════════════════════════════════════
-// MONTHLY PROGRESSION CHART
+// BRAZIL MAP — D3 + GeoJSON inline (sem CDN)
 // ══════════════════════════════════════════════════
-const MONTHS = ['Set','Out','Nov','Dez','Jan','Fev','Mar'];
+let bmapActiveViz = 'cnpj';
+let bmapGD3, bmapZoomBeh;
 
-// Simulated monthly progression data per viz layer
-// Each dataset = one category tracked over 7 months
-const CHART_DATA = {
+// GeoJSON será carregado da API do IBGE (por estado, código numérico)
+const BRAZIL_GEOJSON_PLACEHOLDER = null;
+// Mapa: sigla → código IBGE
+const UF_CODES = {AC:12,AL:27,AM:13,AP:16,BA:29,CE:23,DF:53,ES:32,GO:52,MA:21,MG:31,MS:50,MT:51,PA:15,PB:25,PE:26,PI:22,PR:41,RJ:33,RN:24,RO:11,RR:14,RS:43,SC:42,SE:28,SP:35,TO:17};
+
+async function bmapLoadIBGE() {
+  const ufs = Object.entries(UF_CODES);
+  const BASE = 'https://servicodados.ibge.gov.br/api/v3/malhas/estados/';
+  const PARAMS = '?formato=application/vnd.geo+json&qualidade=minima';
+  const results = await Promise.all(ufs.map(async ([sigla, cod]) => {
+    const r = await fetch(BASE + cod + PARAMS);
+    const gj = await r.json();
+    // A API retorna FeatureCollection com 1 feature — extraímos e adicionamos sigla
+    const feat = gj.features[0];
+    feat.properties = { sigla };
+    return feat;
+  }));
+  return { type: 'FeatureCollection', features: results };
+}
+
+// Placeholder para não quebrar referências antes do load
+let BRAZIL_GEOJSON = null;
+const BMAP_VIZ = {
   destaque: {
-    datasets: [
-      {label:'Avançando (≥60%)', data:[4,5,6,7,8,9,11], color:'#FACC15'},
-      {label:'Iniciando',        data:[8,9,10,10,10,9,9], color:'#FEF9C3'},
-      {label:'Sem dados',        data:[15,13,11,10,9,9,7], color:'#F1F4F8'},
-    ]
+    label: 'Destaque Geral',
+    getColor: e => {
+      if (!e) return '#E2E8F0';
+      const s = bmapScore(e);
+      return s >= 5 ? '#C9A84C' : s >= 3 ? '#3B82F6' : s >= 1 ? '#86EFAC' : '#E2E8F0';
+    },
+    getText: e => {
+      if (!e) return '—';
+      const s = bmapScore(e);
+      return s >= 5 ? `⭐ Destaque (${s}pts)` : s >= 3 ? `✓ Avançando (${s}pts)` : s >= 1 ? `→ Iniciando (${s}pts)` : 'Sem dados';
+    },
+    legend: [{color:'#C9A84C',label:'Destaque (5+)'},{color:'#3B82F6',label:'Avançando (3-4)'},{color:'#86EFAC',label:'Iniciando (1-2)'},{color:'#E2E8F0',label:'Sem dados'}]
   },
-  gestao: {
-    datasets: [
-      {label:'CNPJ Ativo',        data:[10,11,12,13,13,14,15], color:'#1D4ED8'},
-      {label:'Regularizando',     data:[4,4,3,3,3,3,3],         color:'#60A5FA'},
-      {label:'Inativo',           data:[7,7,7,6,6,5,5],         color:'#BFDBFE'},
-    ]
+  cnpj: {
+    label: 'Status CNPJ',
+    getColor: e => e ? ({ativo:'#1D4ED8',regularizando:'#60A5FA',inativo:'#BFDBFE',seminfo:'#FEF9C3'}[e.cnpj] || '#E2E8F0') : '#E2E8F0',
+    getText:  e => e ? ({ativo:'CNPJ Ativo',regularizando:'Regularizando',inativo:'CNPJ Inativo',seminfo:'Sem info'}[e.cnpj] || 'Sem info') : '—',
+    legend: [{color:'#1D4ED8',label:'CNPJ Ativo'},{color:'#60A5FA',label:'Regularizando'},{color:'#BFDBFE',label:'CNPJ Inativo'},{color:'#FEF9C3',label:'Sem info'}]
   },
-  cbth: {
-    datasets: [
-      {label:'Todas 4 ações', data:[2,3,4,5,6,7,8],  color:'#15803D'},
-      {label:'3 ações',       data:[3,3,4,4,4,5,5],  color:'#16A34A'},
-      {label:'2 ações',       data:[4,5,4,4,4,3,3],  color:'#4ADE80'},
-      {label:'1 ação',        data:[5,4,4,3,3,3,3],  color:'#BBF7D0'},
-    ]
+  ig: {
+    label: 'Presença IG',
+    getColor: e => e ? ({ativo:'#7C3AED',inconstante:'#A78BFA',inativo:'#DDD6FE'}[e.ig_status] || '#E2E8F0') : '#E2E8F0',
+    getText:  e => e ? ({ativo:'IG Ativo',inconstante:'Inconstante',inativo:'IG Inativo'}[e.ig_status] || 'Sem Instagram') : '—',
+    legend: [{color:'#7C3AED',label:'IG Ativo'},{color:'#A78BFA',label:'Inconstante'},{color:'#DDD6FE',label:'IG Inativo'},{color:'#E2E8F0',label:'Sem IG'}]
   },
-  digital: {
-    datasets: [
-      {label:'IG Ativo',       data:[8,9,10,11,12,13,13], color:'#6B21A8'},
-      {label:'IG Inconstante', data:[5,5,5,4,4,4,4],      color:'#A855F7'},
-      {label:'IG Inativo',     data:[6,5,5,5,4,4,4],      color:'#D8B4FE'},
-    ]
+  score: {
+    label: 'Score Geral',
+    getColor: e => { const s = e ? bmapScore(e) : 0; return s>=5?'#15803D':s>=4?'#22C55E':s>=3?'#86EFAC':s>=1?'#FCD34D':'#E2E8F0'; },
+    getText:  e => e ? `Score ${bmapScore(e)}/6` : '—',
+    legend: [{color:'#15803D',label:'Score 5-6'},{color:'#22C55E',label:'Score 4'},{color:'#86EFAC',label:'Score 3'},{color:'#FCD34D',label:'Score 1-2'},{color:'#E2E8F0',label:'Score 0'}]
   },
-  diversidade: {
-    datasets: [
-      {label:'Com ações',   data:[8,9,10,11,12,13,14], color:'#EA580C'},
-      {label:'Sem ações',   data:[10,10,9,9,8,8,8],    color:'#FED7AA'},
-      {label:'Não avaliado',data:[9,8,8,7,7,6,5],      color:'#E5E7EB'},
-    ]
+  eventos: {
+    label: 'Eventos CBTH',
+    getColor: e => { const n = e ? (e.ativacoes||[]).length : 0; return n>=3?'#0F766E':n===2?'#2DD4BF':n===1?'#99F6E4':'#E2E8F0'; },
+    getText:  e => { const n = e ? (e.ativacoes||[]).length : 0; return n ? `${n} evento(s)` : 'Sem eventos'; },
+    legend: [{color:'#0F766E',label:'3+ eventos'},{color:'#2DD4BF',label:'2 eventos'},{color:'#99F6E4',label:'1 evento'},{color:'#E2E8F0',label:'Sem eventos'}]
   },
   banco: {
-    datasets: [
-      {label:'Alimentando', data:[6,7,8,9,11,12,14], color:'#78350F'},
-      {label:'Não aliment.',data:[21,20,19,18,16,15,13], color:'#CBD5E0'},
-    ]
-  },
+    label: 'Banco de Jogadores',
+    getColor: e => e ? (e.banco_jog==='sim' ? '#EA580C' : '#E2E8F0') : '#E2E8F0',
+    getText:  e => e ? (e.banco_jog==='sim' ? '✓ Alimentando banco' : '✗ Não alimentando') : '—',
+    legend: [{color:'#EA580C',label:'Alimentando'},{color:'#E2E8F0',label:'Não alimentando'}]
+  }
+};
+
+function bmapScore(e) {
+  let s = 0;
+  if (e.cnpj === 'ativo') s++;
+  if (e.ig_status === 'ativo') s++;
+  if (e.resp_com) s++;
+  if (e.ativacoes && e.ativacoes.length) s++;
+  if (e.banco_jog === 'sim') s++;
+  return s;
+}
+
+function bmapDrawGeoJSON(geojson) {
+  const container = document.getElementById('bmap-container');
+  const w = container.clientWidth, h = container.clientHeight;
+  const svg = d3.select('#bmap-svg');
+  svg.selectAll('*').remove();
+
+  const projection = d3.geoMercator()
+    .center([-52, -14])
+    .scale(Math.min(w, h) * 1.32)
+    .translate([w / 2, h / 2]);
+
+  const pathFn = d3.geoPath().projection(projection);
+  const g = svg.append('g');
+  bmapGD3 = g;
+
+  bmapZoomBeh = d3.zoom()
+    .scaleExtent([0.5, 20])
+    .on('zoom', ev => g.attr('transform', ev.transform));
+  svg.call(bmapZoomBeh);
+
+  const viz = BMAP_VIZ[bmapActiveViz];
+  const tooltip = document.getElementById('bmap-tooltip');
+
+  g.selectAll('.bmap-state')
+    .data(geojson.features)
+    .enter().append('path')
+    .attr('class', 'bmap-state')
+    .attr('d', pathFn)
+    .attr('data-uf', d => d.properties.sigla)
+    .attr('fill', d => {
+      const e = ESTADOS.find(x => x.uf === d.properties.sigla);
+      return viz.getColor(e);
+    })
+    .attr('stroke', '#fff')
+    .attr('stroke-width', 0.8)
+    .style('cursor', 'pointer')
+    .on('mousemove', function(event, d) {
+      const sigla = d.properties.sigla;
+      const e = ESTADOS.find(x => x.uf === sigla);
+      const nome = e ? (e.nome||sigla).replace(/^(Fed\.|Federação)\s*/i,'') : sigla;
+      const cnpjLbl = {ativo:'CNPJ Ativo',regularizando:'Regularizando',inativo:'Inativo',seminfo:'Sem info'}[e?.cnpj||''] || '—';
+      const igLbl = {ativo:'IG Ativo',inconstante:'Inconstante',inativo:'Inativo'}[e?.ig_status||''] || '—';
+      const evts = (e?.ativacoes||[]).length;
+      const score = e ? bmapScore(e) : 0;
+      tooltip.style.opacity = '1';
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top  = (event.clientY - 10) + 'px';
+      tooltip.innerHTML = `
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--txt);margin-bottom:2px">${sigla}</div>
+        <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">${nome || 'Sem cadastro'}</div>
+        ${e?.resp ? `<div style="font-size:10px;color:var(--txt2);margin-bottom:6px">👤 ${e.resp}</div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px">
+          <div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">CNPJ</span><span style="font-weight:600;color:var(--txt)">${cnpjLbl}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Instagram</span><span style="font-weight:600;color:var(--txt)">${igLbl}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Eventos</span><span style="font-weight:600;color:var(--txt)">${evts || '—'}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Banco Jog.</span><span style="font-weight:600;color:var(--txt)">${e?.banco_jog==='sim'?'✓ Sim':'—'}</span></div>
+          <div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Score</span><span style="font-weight:700;color:var(--txt)">${score}/6</span></div>
+        </div>
+      `;
+      d3.select(this).attr('fill', d3.color(viz.getColor(e))?.darker(0.3) || '#aaa');
+    })
+    .on('mouseleave', function(event, d) {
+      tooltip.style.opacity = '0';
+      const e = ESTADOS.find(x => x.uf === d.properties.sigla);
+      d3.select(this).attr('fill', viz.getColor(e));
+    });
+
+  g.selectAll('.bmap-label')
+    .data(geojson.features)
+    .enter().append('text')
+    .attr('class', 'bmap-label')
+    .attr('transform', d => `translate(${pathFn.centroid(d)})`)
+    .attr('text-anchor', 'middle')
+    .attr('dy', '0.35em')
+    .style('font-size', '9px')
+    .style('font-weight', '700')
+    .style('fill', 'rgba(0,0,0,0.65)')
+    .style('font-family', "'DM Mono',monospace")
+    .style('pointer-events', 'none')
+    .text(d => d.properties.sigla);
+
+  document.getElementById('bmap-loading').style.display = 'none';
+  bmapRenderLegend();
+  bmapRenderList();
+}
+
+function bmapInit() {
+  document.getElementById('bmap-loading').style.display = 'flex';
+  if (BRAZIL_GEOJSON) { bmapDrawGeoJSON(BRAZIL_GEOJSON); return; }
+
+  const BASE = 'https://servicodados.ibge.gov.br/api/v3/malhas/estados/';
+  const PARAMS = '?formato=application/vnd.geo+json&qualidade=minima';
+
+  Promise.all(
+    Object.entries(UF_CODES).map(([sigla, cod]) =>
+      fetch(BASE + cod + PARAMS)
+        .then(r => r.json())
+        .then(gj => { const f = gj.features[0]; f.properties = {sigla}; return f; })
+    )
+  ).then(features => {
+    BRAZIL_GEOJSON = {type:'FeatureCollection', features};
+    bmapDrawGeoJSON(BRAZIL_GEOJSON);
+  }).catch(() => {
+    document.getElementById('bmap-loading').innerHTML =
+      '<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;font-weight:600;color:#B91C1C;display:flex;align-items:center;gap:10px"><span>⚠️</span> Sem internet. Abra o dashboard online para carregar o mapa.</div>';
+  });
+}
+
+function bmapSetViz(val) {
+  bmapActiveViz = val;
+  const viz = BMAP_VIZ[bmapActiveViz];
+  bmapGD3.selectAll('.bmap-state').attr('fill', d => {
+    const e = ESTADOS.find(x => x.uf === d.properties.sigla);
+    return viz.getColor(e);
+  });
+  bmapRenderLegend();
+  bmapRenderList();
+}
+
+function bmapRenderLegend() {
+  const viz = BMAP_VIZ[bmapActiveViz];
+  const leg = document.getElementById('bmap-legend');
+  if (!leg) return;
+  leg.innerHTML = `<span style="font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px">Legenda</span>` +
+    viz.legend.map(l =>
+      `<div style="display:flex;align-items:center;gap:5px">
+        <div style="width:12px;height:12px;background:${l.color};border-radius:2px;border:1px solid rgba(0,0,0,0.08)"></div>
+        <span style="font-size:11px;color:var(--txt2)">${l.label}</span>
+      </div>`
+    ).join('');
+}
+
+function bmapRenderList() {
+  const viz = BMAP_VIZ[bmapActiveViz];
+  const list = document.getElementById('bmap-list');
+  if (!list) return;
+  const sorted = [...ESTADOS].sort((a,b) => bmapScore(b) - bmapScore(a) || (a.uf||'').localeCompare(b.uf||''));
+  list.innerHTML = sorted.map(e => {
+    const color = viz.getColor(e);
+    const txt   = viz.getText(e);
+    const nome  = (e.nome||'').replace(/^(Fed\.|Federação)\s*/i,'') || 'Sem cadastro';
+    const score = bmapScore(e);
+    return `<div style="display:flex;align-items:center;gap:7px;padding:6px 6px;border-radius:6px;margin-bottom:2px;transition:background .12s;cursor:default"
+      onmouseenter="this.style.background='var(--surface)'" onmouseleave="this.style.background='transparent'">
+      <div style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0;border:1px solid rgba(0,0,0,0.1)"></div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+          <span style="font-size:11px;font-weight:700;color:var(--txt)">${e.uf}</span>
+          <span style="font-size:10px;font-weight:700;color:var(--txt3)">${score}pt</span>
+        </div>
+        <div style="font-size:10px;color:var(--txt3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function bmapZoom(factor) {
+  d3.select('#bmap-svg').transition().duration(300)
+    .call(bmapZoomBeh.scaleBy, factor);
+}
+
+function bmapReset() {
+  d3.select('#bmap-svg').transition().duration(400)
+    .call(bmapZoomBeh.transform, d3.zoomIdentity);
 };
 
 let progressionChart = null;
@@ -2140,7 +2365,7 @@ const HIST_CAT_CFG = {
     ]
   },
   div: {
-    label:'Divulgação', btnColor:'#6B21A8',
+    label:'Marca CBTH', btnColor:'#6B21A8',
     opts:[
       {val:'alta',  lbl:'Alta',   bg:'#6B21A8', color:'#fff'},
       {val:'media', lbl:'Média',  bg:'#A855F7', color:'#fff'},
@@ -2149,145 +2374,30 @@ const HIST_CAT_CFG = {
       {val:'',      lbl:'—',      bg:'#F1F4F8', color:'#9AA3B2'},
     ]
   },
-  marca: {
-    label:'Marca CBTH', btnColor:'#6B21A8',
+  ativacoes: {
+    label:'Eventos', btnColor:'#15803D',
+    isEvents: true,
     opts:[
-      {val:'ativa',   lbl:'Ativa',   bg:'#6B21A8', color:'#fff'},
-      {val:'inativa', lbl:'Inativa', bg:'#D8B4FE', color:'#6B21A8'},
-      {val:'',        lbl:'—',       bg:'#F1F4F8', color:'#9AA3B2'},
-    ]
-  },
-  inclusao: {
-    label:'Inclusão', btnColor:'#EAB308',
-    opts:[
-      {val:'acoes',     lbl:'Com ações', bg:'#EAB308', color:'#fff'},
-      {val:'sem_acoes', lbl:'Sem ações', bg:'#FEF9C3', color:'#92400E'},
-      {val:'',          lbl:'—',         bg:'#F1F4F8', color:'#9AA3B2'},
-    ]
-  },
-  cbth_ev_logo: {
-    label:'Ev. c/ Logo', btnColor:'#16A34A',
-    opts:[
-      {val:'sim', lbl:'Sim', bg:'#16A34A', color:'#fff'},
-      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
-    ]
-  },
-  cbth_atleta: {
-    label:'At. Atleta', btnColor:'#16A34A',
-    opts:[
-      {val:'sim', lbl:'Sim', bg:'#16A34A', color:'#fff'},
-      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
-    ]
-  },
-  cbth_palestra: {
-    label:'Palestras', btnColor:'#16A34A',
-    opts:[
-      {val:'sim', lbl:'Sim', bg:'#16A34A', color:'#fff'},
-      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
-    ]
-  },
-  cbth_start: {
-    label:'Start', btnColor:'#16A34A',
-    opts:[
-      {val:'sim', lbl:'Sim', bg:'#16A34A', color:'#fff'},
-      {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
+      {val:'_com', lbl:'Com eventos', bg:'#15803D', color:'#fff'},
+      {val:'',     lbl:'—',           bg:'#F1F4F8', color:'#9AA3B2'},
     ]
   },
   banco_jog: {
-    label:'Banco Jog.', btnColor:'#78350F',
+    label:'Banco Jog.', btnColor:'#EA580C',
     opts:[
-      {val:'sim', lbl:'Sim', bg:'#78350F', color:'#fff'},
+      {val:'sim', lbl:'Sim', bg:'#EA580C', color:'#fff'},
       {val:'nao', lbl:'Não', bg:'#F1F4F8', color:'#9AA3B2'},
     ]
   },
 };
 
 let activeCat = 'cnpj';
-let activeMatrixMes = null; // when set, matrix view is open for this month
 
 const MO_NAMES = {'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio',
   '06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
 const MO_SHORT = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun',
   '07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
 
-function voltarMeses() {
-  activeMatrixMes = null;
-  document.getElementById('hist-view-months').style.display = 'flex';
-  document.getElementById('hist-view-matrix-bar').style.display = 'none';
-  document.getElementById('hist-legend-bar').style.display = 'none';
-  document.getElementById('hist-content-months').style.display = '';
-  document.getElementById('hist-content-matrix').style.display = 'none';
-  renderMonthCards();
-}
-
-function abrirMes(mes) {
-  activeMatrixMes = mes;
-  const [y, mo] = mes.split('-');
-  document.getElementById('hist-matrix-title').textContent = `${MO_NAMES[mo] || mo} ${y}`;
-  document.getElementById('hist-view-months').style.display = 'none';
-  document.getElementById('hist-view-matrix-bar').style.display = 'flex';
-  document.getElementById('hist-legend-bar').style.display = 'flex';
-  document.getElementById('hist-content-months').style.display = 'none';
-  document.getElementById('hist-content-matrix').style.display = '';
-  renderHistoricoMatrix();
-}
-
-function renderMonthCards() {
-  const meses = getHistMeses();
-  const cards = document.getElementById('hist-month-cards');
-  const empty = document.getElementById('hist-empty-msg');
-
-  if (!meses.length) {
-    cards.style.display = 'none';
-    empty.style.display = '';
-    return;
-  }
-  cards.style.display = '';
-  empty.style.display = 'none';
-
-  // All category keys for overall progress calculation
-  const ALL_CAT_KEYS = ['cnpj','ig_status','div','marca','inclusao','cbth_ev_logo','cbth_atleta','cbth_palestra','cbth_start','banco_jog'];
-
-  const curMes = new Date().toISOString().slice(0, 7);
-  cards.innerHTML = [...meses].reverse().map(m => {
-    const [y, mo] = m.split('-');
-    const rows = HISTORICO.filter(r => r.mes === m);
-    const total = rows.length;
-    
-    // Calculate overall progress: count filled cells across ALL categories
-    let totalCells = 0;
-    let filledCells = 0;
-    rows.forEach(r => {
-      ALL_CAT_KEYS.forEach(cat => {
-        totalCells++;
-        if (r[cat] && r[cat] !== '') filledCells++;
-      });
-    });
-    const overallPct = totalCells ? Math.round(filledCells / totalCells * 100) : 0;
-    
-    // Count how many categories have at least some data
-    const catsFilled = ALL_CAT_KEYS.filter(cat => rows.some(r => r[cat] && r[cat] !== '')).length;
-    
-    // Also show the active category progress for the subtitle
-    const activeFilled = rows.filter(r => r[activeCat] && r[activeCat] !== '').length;
-    const activePct = total ? Math.round(activeFilled / total * 100) : 0;
-    
-    const isCur = m === curMes;
-    return `
-    <div onclick="abrirMes('${m}')" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1.5px solid ${isCur ? 'var(--txt)' : 'var(--border)'};border-radius:10px;padding:14px 20px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
-      <div style="font-size:28px">📅</div>
-      <div style="flex:1">
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--txt)">${MO_NAMES[mo] || mo} ${y}${isCur ? ' <span style="font-size:10px;background:var(--txt);color:#fff;padding:1px 7px;border-radius:10px;margin-left:6px">Atual</span>' : ''}</div>
-        <div style="font-size:11px;color:var(--txt3);margin-top:3px">${total} estados registrados · ${catsFilled}/${ALL_CAT_KEYS.length} categorias com dados</div>
-        <div style="width:200px;height:4px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:6px">
-          <div style="height:100%;background:linear-gradient(90deg, #1D4ED8 0%, #16A34A 100%);width:${overallPct}%;border-radius:99px;transition:width .4s"></div>
-        </div>
-      </div>
-      <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--txt2)">${overallPct}%</div>
-      <div style="color:var(--txt3);font-size:16px">›</div>
-    </div>`;
-  }).join('');
-}
 function setHistCat(cat) {
   activeCat = cat;
   document.querySelectorAll('.hist-cat-btn').forEach(b => {
@@ -2298,8 +2408,7 @@ function setHistCat(cat) {
     b.style.color = isCur ? '#fff' : '';
     b.style.borderColor = isCur ? cfg.btnColor : '';
   });
-  if (activeMatrixMes) renderHistoricoMatrix();
-  else renderMonthCards();
+  renderHistoricoMatrix();
 }
 
 function getHistMeses() {
@@ -2314,7 +2423,7 @@ function syncEstadosFromHistorico() {
   const months = [...new Set(HISTORICO.map(r=>r.mes))].sort();
   if (!months.length) return;
   const latestMonth = months[months.length - 1];
-  const HIST_FIELDS = ['cnpj','ig_status','div','marca','inclusao','cbth_ev_logo','cbth_atleta','cbth_palestra','cbth_start','banco_jog'];
+  const HIST_FIELDS = ['cnpj','ig_status','div','ativacoes','banco_jog'];
   HISTORICO.filter(r=>r.mes===latestMonth).forEach(row => {
     const estado = ESTADOS.find(e=>e.uf===row.uf);
     if (estado) {
@@ -2330,8 +2439,8 @@ function setHistCell(uf, mes, field, val) {
   if (!row) {
     const estado = ESTADOS.find(e=>e.uf===uf);
     row = {mes, uf, nome:estado?.nome||'', resp_com:'',
-      cnpj:'', ig_status:'', div:'', marca:'', inclusao:'',
-      cbth_ev_logo:'nao', cbth_atleta:'nao', cbth_palestra:'nao', cbth_start:'nao', banco_jog:'nao'};
+      cnpj:'', ig_status:'', div:'',
+      ativacoes:[], banco_jog:'nao'};
     HISTORICO.push(row);
   }
   row[field] = val;
@@ -2352,40 +2461,33 @@ function addHistMes() {
   ESTADOS.forEach(e => {
     if (!HISTORICO.find(r=>r.uf===e.uf&&r.mes===m)) {
       HISTORICO.push({mes:m, uf:e.uf, nome:e.nome||'', resp_com:'',
-        cnpj:'', ig_status:'', div:'', marca:'', inclusao:'',
-        cbth_ev_logo:'nao', cbth_atleta:'nao', cbth_palestra:'nao', cbth_start:'nao', banco_jog:'nao'});
+        cnpj:'', ig_status:'', div:'',
+        ativacoes:[], banco_jog:'nao'});
     }
   });
   saveHistorico();
-  abrirMes(m);
+  renderHistoricoMatrix();
+  // Scroll to the new month column (rightmost)
+  setTimeout(() => {
+    const cont = document.getElementById('hist-content-matrix');
+    if (cont) cont.scrollLeft = cont.scrollWidth;
+  }, 100);
 }
 
-function snapshotMesAtual() {
-  const m = new Date().toISOString().slice(0,7);
-  if (!confirm(`Criar snapshot de ${m} com os dados atuais? Dados existentes para este mês serão sobrescritos.`)) return;
-  HISTORICO = HISTORICO.filter(r=>r.mes!==m);
-  ESTADOS.forEach(e => HISTORICO.push({
-    mes:m, uf:e.uf, nome:e.nome||'', resp_com:e.resp_com||'',
-    cnpj:e.cnpj||'', ig_status:e.ig_status||'', div:e.div||'',
-    marca:e.marca||'', inclusao:e.inclusao||'',
-    cbth_ev_logo:e.cbth_ev_logo||'nao', cbth_atleta:e.cbth_atleta||'nao',
-    cbth_palestra:e.cbth_palestra||'nao', cbth_start:e.cbth_start||'nao',
-    banco_jog:e.banco_jog||'nao'
-  }));
+function deleteHistMes(mes) {
+  const [y,mo] = mes.split('-');
+  if (!confirm(`Excluir coluna ${MO_SHORT[mo]||mo}/${y.slice(2)}?`)) return;
+  HISTORICO = HISTORICO.filter(r=>r.mes!==mes);
   saveHistorico();
-  syncEstadosFromHistorico();
-  renderMap();
-  renderDestaqueRanking();
-  abrirMes(m);
+  renderHistoricoMatrix();
   updateChartFromHistorico();
 }
 
+// ── Multi-month matrix ──────────────────────────────
 function renderHistoricoMatrix() {
-  const mes = activeMatrixMes;
-  if (!mes) { renderMonthCards(); return; }
-
+  const meses = getHistMeses();
   const cfg = HIST_CAT_CFG[activeCat];
-  const [y, mo] = mes.split('-');
+  const curMes = new Date().toISOString().slice(0,7);
 
   // Legend bar
   const legendBar = document.getElementById('hist-legend-bar');
@@ -2399,63 +2501,274 @@ function renderHistoricoMatrix() {
     <span style="color:var(--txt3)">Não registrado</span>
   </div>`;
 
-  // Header — single month column
+  // If no months exist yet, show empty state inside the table
+  if (!meses.length) {
+    document.getElementById('hist-thead').innerHTML = `<tr>
+      <th class="hcol-uf" style="position:sticky;left:0;z-index:5;background:var(--surface2)">UF</th>
+      <th class="hcol-nome" style="position:sticky;left:36px;z-index:5;background:var(--surface2);min-width:180px;border-right:1.5px solid var(--border)">Federação</th>
+      <th style="padding:16px 24px;color:var(--txt3);font-size:12px;font-weight:400">Nenhum mês ainda — use "+ Mês" para começar</th>
+    </tr>`;
+    document.getElementById('hist-tbody').innerHTML = '';
+    return;
+  }
+
+  // Determine col width based on category
+  const colW = cfg.isEvents ? 430 : cfg.isText ? 180 : 140;
+
+  // Header row: UF | Federação | [Mês1] | [Mês2] | ...
   document.getElementById('hist-thead').innerHTML = `<tr>
-    <th class="hcol-uf"    style="position:sticky;left:0;z-index:5;background:var(--surface2)">UF</th>
-    <th class="hcol-nome"  style="position:sticky;left:36px;z-index:5;background:var(--surface2);min-width:180px;border-right:1.5px solid var(--border)">Federação</th>
-    <th class="hcol-month cur" style="min-width:160px">${MO_SHORT[mo]||mo}/${y.slice(2)} · ${cfg.label}</th>
+    <th class="hcol-uf" style="position:sticky;left:0;z-index:6;background:var(--surface2)">UF</th>
+    <th class="hcol-nome" style="position:sticky;left:36px;z-index:6;background:var(--surface2);min-width:180px;border-right:1.5px solid var(--border)">Federação</th>
+    ${meses.map(m => {
+      const [y,mo] = m.split('-');
+      const isCur = m === curMes;
+      return `<th class="hcol-month${isCur?' cur':''}" style="min-width:${colW}px;position:relative">
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+          <span>${MO_SHORT[mo]||mo}/${y.slice(2)}</span>
+          ${isCur ? '<span style="font-size:9px;background:var(--txt);color:#fff;padding:1px 5px;border-radius:8px">atual</span>' : ''}
+          <button onclick="deleteHistMes('${m}')" title="Excluir mês" style="border:none;background:none;cursor:pointer;color:var(--txt3);font-size:11px;padding:0;line-height:1;opacity:.5" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.5">×</button>
+        </div>
+      </th>`;
+    }).join('')}
   </tr>`;
 
-  // Body
+  // Body rows: one per estado, one cell per month
   document.getElementById('hist-tbody').innerHTML = ESTADOS.map(e => {
-    const row = getHistCell(e.uf, mes);
-    const val = row ? (row[activeCat] || '') : '';
-    const opt = cfg.opts.find(o=>o.val===val) || cfg.opts[cfg.opts.length-1];
-    const optsList = cfg.opts.map(o=>`<option value="${o.val}" ${val===o.val?'selected':''}>${o.lbl}</option>`).join('');
     const nome = (e.nome||'').replace(/^Fed\.\s*/i,'').replace(/^Federação\s*/i,'') || e.uf;
+    const cells = meses.map(m => {
+      const row = getHistCell(e.uf, m);
+      const val = row ? (row[activeCat] ?? '') : (cfg.isEvents ? [] : '');
+
+      if (cfg.isEvents) {
+        const evts = Array.isArray(val) ? val : [];
+        const cellId = `evtcell-${e.uf}-${m}-${activeCat}`;
+        return `<td class="hcell" style="min-width:${colW}px;padding:3px 4px;vertical-align:top" id="${cellId}">
+          ${renderEventsCellInner(e.uf, m, activeCat, evts)}
+        </td>`;
+      }
+
+      if (cfg.isText) {
+        const hasTxt = val && String(val).trim();
+        return `<td class="hcell" style="min-width:${colW}px;padding:3px 4px;vertical-align:top">
+          <input type="text"
+            value="${String(val).replace(/"/g,'&quot;')}"
+            placeholder="—"
+            data-uf="${e.uf}" data-mes="${m}" data-field="${activeCat}"
+            oninput="onHistTextChange(this)"
+            style="width:100%;border:1px solid ${hasTxt?'#15803D':'var(--border)'};border-radius:5px;padding:4px 7px;font-size:11px;font-family:inherit;color:var(--txt);background:${hasTxt?'#DCFCE7':'var(--surface)'};outline:none;transition:border .15s,background .15s"
+            onfocus="this.style.borderColor='#15803D'"
+          />
+        </td>`;
+      }
+
+      // Select (CNPJ, Status IG, Divulgação, Banco Jog.)
+      const opt = cfg.opts.find(o=>o.val===val) || cfg.opts[cfg.opts.length-1];
+      const optsList = cfg.opts.map(o=>`<option value="${o.val}" ${val===o.val?'selected':''}>${o.lbl}</option>`).join('');
+      return `<td class="hcell" style="min-width:${colW}px">
+        <div class="hcell-inner" style="background:${opt.bg};color:${opt.color}"><span class="hcell-lbl">${opt.lbl}</span><select class="hcell-overlay" data-uf="${e.uf}" data-mes="${m}" data-field="${activeCat}" onchange="onHistCellChange(this)">${optsList}</select></div>
+      </td>`;
+    }).join('');
+
     return `<tr>
       <td class="hrow-uf">${e.uf}</td>
       <td class="hrow-label" title="${e.nome||''}">${nome}</td>
-      <td class="hcell">
-        <div class="hcell-inner" style="background:${opt.bg};color:${opt.color}">${opt.lbl}</div>
-        <select data-uf="${e.uf}" data-mes="${mes}" data-field="${activeCat}" onchange="onHistCellChange(this)">${optsList}</select>
-      </td>
+      ${cells}
     </tr>`;
   }).join('');
+}
+
+function renderEventsCellInner(uf, mes, field, evts) {
+  const color = '#15803D';
+  const catColors = {
+    'Ativação':'#DBEAFE','Inclusão':'#DCFCE7','Estadual':'#FEF3C7','Nacional':'#F3E8FF',
+    'Regional':'#FFE4E6','Start':'#ECFDF5','Palestra/Painel':'#FFF7ED','Clínica':'#F0FDF4','Outro':'#F1F5F9'
+  };
+  const catText = {
+    'Ativação':'#1D4ED8','Inclusão':'#15803D','Estadual':'#B45309','Nacional':'#6B21A8',
+    'Regional':'#BE123C','Start':'#047857','Palestra/Painel':'#C2410C','Clínica':'#166534','Outro':'#475569'
+  };
+  const rows = evts.map((ev,i) => {
+    const preview = ev.nome ? ev.nome : 'Novo evento';
+    const catBg  = catColors[ev.categoria] || '#F1F5F9';
+    const catFg  = catText[ev.categoria]   || '#475569';
+    const catLbl = ev.categoria || '—';
+    const accId  = `evtacc-${uf}-${mes}-${field}-${i}`;
+    // novo evento abre expandido; eventos existentes ficam colapsados
+    const isNew  = !ev.nome && !ev.inicio && !ev.fim && !ev.categoria;
+    return `
+    <div id="${accId}" style="margin-bottom:4px;border:1.5px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface)">
+      <!-- cabeçalho clicável -->
+      <div onclick="toggleEvtAcc('${accId}')" style="display:flex;align-items:center;gap:6px;padding:5px 7px;cursor:pointer;user-select:none;background:var(--surface2)">
+        <span style="font-size:10px;line-height:1">📅</span>
+        <span class="evtacc-preview" style="flex:1;font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</span>
+        ${ev.categoria ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:${catBg};color:${catFg};white-space:nowrap">${catLbl}</span>` : ''}
+        <button onclick="event.stopPropagation();removeEvt('${uf}','${mes}','${field}',${i})"
+          style="border:none;background:none;color:var(--txt3);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0;line-height:1;margin-left:2px">×</button>
+        <span class="evtacc-chevron" style="font-size:10px;color:var(--txt3);transition:transform .2s;transform:rotate(${isNew?'180':'0'}deg)">▾</span>
+      </div>
+      <!-- corpo expansível -->
+      <div class="evtacc-body" style="display:${isNew?'grid':'none'};padding:7px 8px;grid-template-columns:1fr 1fr;gap:5px 4px;border-top:1px solid var(--border)">
+        <div style="grid-column:1/-1;display:flex;align-items:center;gap:4px">
+          <span style="font-size:9px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;width:34px">Nome</span>
+          <input type="text" value="${(ev.nome||'').replace(/"/g,'&quot;')}" placeholder="Nome do evento"
+            data-uf="${uf}" data-mes="${mes}" data-field="${field}" data-idx="${i}" data-sub="nome"
+            oninput="onEvtInput(this);updateEvtPreview('${accId}',this.value)"
+            style="flex:1;border:1px solid var(--border);border-radius:4px;outline:none;font-size:11px;font-family:inherit;background:var(--surface);color:var(--txt);padding:3px 6px"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:9px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;width:28px">Iníc.</span>
+          <input type="date" value="${ev.inicio||''}"
+            data-uf="${uf}" data-mes="${mes}" data-field="${field}" data-idx="${i}" data-sub="inicio"
+            onchange="onEvtInput(this)"
+            style="flex:1;border:1px solid var(--border);border-radius:4px;outline:none;font-size:10px;font-family:inherit;background:var(--surface);color:var(--txt);padding:3px 4px"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:9px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;width:28px">Fim</span>
+          <input type="date" value="${ev.fim||''}"
+            data-uf="${uf}" data-mes="${mes}" data-field="${field}" data-idx="${i}" data-sub="fim"
+            onchange="onEvtInput(this)"
+            style="flex:1;border:1px solid var(--border);border-radius:4px;outline:none;font-size:10px;font-family:inherit;background:var(--surface);color:var(--txt);padding:3px 4px"/>
+        </div>
+        <div style="grid-column:1/-1;display:flex;align-items:center;gap:4px">
+          <span style="font-size:9px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;width:34px">Cat.</span>
+          <select data-uf="${uf}" data-mes="${mes}" data-field="${field}" data-idx="${i}" data-sub="categoria"
+            onchange="onEvtInput(this);updateEvtCatBadge('${accId}',this.value)"
+            style="flex:1;border:1px solid var(--border);border-radius:4px;outline:none;font-size:11px;font-family:inherit;background:var(--surface);color:var(--txt);padding:3px 6px">
+            <option value="" ${!ev.categoria?'selected':''}>Selecionar...</option>
+            <option value="Ativação" ${ev.categoria==='Ativação'?'selected':''}>Ativação</option>
+            <option value="Inclusão" ${ev.categoria==='Inclusão'?'selected':''}>Inclusão</option>
+            <option value="Estadual" ${ev.categoria==='Estadual'?'selected':''}>Estadual</option>
+            <option value="Nacional" ${ev.categoria==='Nacional'?'selected':''}>Nacional</option>
+            <option value="Regional" ${ev.categoria==='Regional'?'selected':''}>Regional</option>
+            <option value="Start" ${ev.categoria==='Start'?'selected':''}>Start</option>
+            <option value="Palestra/Painel" ${ev.categoria==='Palestra/Painel'?'selected':''}>Palestra/Painel</option>
+            <option value="Clínica" ${ev.categoria==='Clínica'?'selected':''}>Clínica</option>
+            <option value="Outro" ${ev.categoria==='Outro'?'selected':''}>Outro</option>
+          </select>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  return rows + `<button onclick="addEvt('${uf}','${mes}','${field}')"
+    style="display:flex;align-items:center;justify-content:center;gap:4px;border:1px dashed var(--border2);border-radius:5px;background:none;cursor:pointer;font-size:10px;font-weight:600;color:${color};padding:4px 8px;font-family:inherit;width:100%;margin-top:2px">
+    + Adicionar evento
+  </button>`;
+}
+
+function toggleEvtAcc(accId) {
+  const acc = document.getElementById(accId);
+  if (!acc) return;
+  const body    = acc.querySelector('.evtacc-body');
+  const chevron = acc.querySelector('.evtacc-chevron');
+  const open    = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'grid';
+  chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+function updateEvtPreview(accId, val) {
+  const acc = document.getElementById(accId);
+  if (!acc) return;
+  const span = acc.querySelector('.evtacc-preview');
+  if (span) span.textContent = val || 'Novo evento';
+}
+
+function updateEvtCatBadge(accId, cat) {
+  const catColors = {
+    'Ativação':'#DBEAFE','Inclusão':'#DCFCE7','Estadual':'#FEF3C7','Nacional':'#F3E8FF',
+    'Regional':'#FFE4E6','Start':'#ECFDF5','Palestra/Painel':'#FFF7ED','Clínica':'#F0FDF4','Outro':'#F1F5F9'
+  };
+  const catText = {
+    'Ativação':'#1D4ED8','Inclusão':'#15803D','Estadual':'#B45309','Nacional':'#6B21A8',
+    'Regional':'#BE123C','Start':'#047857','Palestra/Painel':'#C2410C','Clínica':'#166534','Outro':'#475569'
+  };
+  const acc = document.getElementById(accId);
+  if (!acc) return;
+  const header = acc.querySelector('[onclick^="toggleEvtAcc"]');
+  // remove badge antigo se existir
+  const old = header.querySelector('.evtacc-badge');
+  if (old) old.remove();
+  if (cat) {
+    const badge = document.createElement('span');
+    badge.className = 'evtacc-badge';
+    badge.textContent = cat;
+    badge.style.cssText = `font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:${catColors[cat]||'#F1F5F9'};color:${catText[cat]||'#475569'};white-space:nowrap`;
+    // insere antes do botão ×
+    const xBtn = header.querySelector('button');
+    header.insertBefore(badge, xBtn);
+  }
 }
 
 function onHistCellChange(sel) {
   const {uf, mes, field} = sel.dataset;
   setHistCell(uf, mes, field, sel.value);
-  // Update the visual cell immediately
   const cfg = HIST_CAT_CFG[activeCat];
   const opt = cfg.opts.find(o=>o.val===sel.value) || cfg.opts[cfg.opts.length-1];
-  const inner = sel.parentElement.querySelector('.hcell-inner');
+  // select is now inside hcell-inner, so parentElement is the inner div itself
+  const inner = sel.closest('.hcell-inner');
   inner.style.background = opt.bg;
   inner.style.color = opt.color;
-  inner.textContent = opt.lbl;
+  // update text but preserve the select element
+  inner.querySelector('.hcell-lbl').textContent = opt.lbl;
 }
 
-function deleteHistMes(mes) {
-  if (!confirm(`Excluir todos os registros do mês ${mes}?`)) return;
-  HISTORICO = HISTORICO.filter(r=>r.mes!==mes);
-  saveHistorico();
-  voltarMeses();
-  updateChartFromHistorico();
+function onHistTextChange(inp) {
+  const {uf, mes, field} = inp.dataset;
+  setHistCell(uf, mes, field, inp.value);
+  const hasTxt = inp.value.trim();
+  inp.style.borderColor = hasTxt ? '#15803D' : 'var(--border)';
+  inp.style.background  = hasTxt ? '#DCFCE7' : 'var(--surface)';
 }
+
+function getEvtList(uf, mes, field) {
+  const row = getHistCell(uf, mes);
+  if (!row) return [];
+  return Array.isArray(row[field]) ? row[field] : [];
+}
+
+function saveEvtList(uf, mes, field, list) {
+  setHistCell(uf, mes, field, list);
+}
+
+function refreshEvtCell(uf, mes, field) {
+  const cellId = `evtcell-${uf}-${mes}-${field}`;
+  const cell = document.getElementById(cellId);
+  if (!cell) return;
+  const evts = getEvtList(uf, mes, field);
+  cell.innerHTML = renderEventsCellInner(uf, mes, field, evts);
+}
+
+function addEvt(uf, mes, field) {
+  const list = getEvtList(uf, mes, field);
+  list.push({nome:'', inicio:'', fim:'', categoria:''});
+  saveEvtList(uf, mes, field, list);
+  refreshEvtCell(uf, mes, field);
+}
+
+function removeEvt(uf, mes, field, idx) {
+  const list = getEvtList(uf, mes, field);
+  list.splice(idx, 1);
+  saveEvtList(uf, mes, field, list);
+  refreshEvtCell(uf, mes, field);
+}
+
+function onEvtInput(inp) {
+  const {uf, mes, field, idx, sub} = inp.dataset;
+  const list = getEvtList(uf, mes, field);
+  if (!list[idx]) list[idx] = {nome:'', inicio:'', fim:'', categoria:''};
+  list[idx][sub] = inp.value;
+  saveEvtList(uf, mes, field, list);
+}
+
 
 function scoreFromRow(r) {
   let s = 0;
-  if(r.cnpj==='ativo') s++;
-  if(r.cbth_ev_logo==='sim') s++;
-  if(r.cbth_atleta==='sim') s++;
-  if(r.cbth_palestra==='sim') s++;
-  if(r.cbth_start==='sim') s++;
-  if(r.ig_status==='ativo'||r.ig_status==='inconstante') s++;
-  if(r.div==='media'||r.div==='alta') s++;
-  if(r.marca==='ativa') s++;
-  if(r.inclusao==='acoes') s++;
-  if(r.banco_jog==='sim') s++;
+  if(r.cnpj==='ativo')              s+=3;
+  else if(r.cnpj==='regularizando') s+=1;
+  s += calcEventPts(r.ativacoes);
+  if(r.ig_status==='ativo')         s+=2;
+  else if(r.ig_status==='inconstante') s+=1;
+  if(r.div==='media'||r.div==='alta')  s+=1;
+  if(r.banco_jog==='sim')              s+=1;
   return s;
 }
 
@@ -2468,8 +2781,8 @@ function updateChartFromHistorico() {
   const labels = months.map(m => { const [y,mo]=m.split('-'); return `${moNames[mo]||mo}/${y.slice(2)}`; });
   const newChartData = {
     destaque: { datasets: [
-      {label:'Avançando (≥60%)', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>=6).length), color:'#FACC15'},
-      {label:'Iniciando',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>0&&scoreFromRow(r)<6).length), color:'#FEF9C3'},
+      {label:'Avançando (≥60%)', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>=5).length), color:'#6B7280'},
+      {label:'Iniciando',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)>0&&scoreFromRow(r)<5).length), color:'#CBD5E0'},
       {label:'Sem dados',        data: months.map(m => HISTORICO.filter(r=>r.mes===m&&scoreFromRow(r)===0).length), color:'#F1F4F8'},
     ]},
     gestao: { datasets: [
@@ -2478,21 +2791,16 @@ function updateChartFromHistorico() {
       {label:'Inativo',       data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.cnpj==='inativo').length), color:'#BFDBFE'},
     ]},
     cbth: { datasets: [
-      {label:'Todas 4', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&[r.cbth_ev_logo,r.cbth_atleta,r.cbth_palestra,r.cbth_start].every(v=>v==='sim')).length), color:'#15803D'},
-      {label:'3 ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&[r.cbth_ev_logo,r.cbth_atleta,r.cbth_palestra,r.cbth_start].filter(v=>v==='sim').length===3).length), color:'#16A34A'},
-      {label:'1–2',     data: months.map(m => HISTORICO.filter(r=>r.mes===m&&[r.cbth_ev_logo,r.cbth_atleta,r.cbth_palestra,r.cbth_start].filter(v=>v==='sim').length<3&&[r.cbth_ev_logo,r.cbth_atleta,r.cbth_palestra,r.cbth_start].some(v=>v==='sim')).length), color:'#4ADE80'},
+      {label:'Com eventos', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&!!(r.ativacoes&&r.ativacoes.length)).length), color:'#15803D'},
+      {label:'Sem eventos',  data: months.map(m => HISTORICO.filter(r=>r.mes===m&&!(r.ativacoes&&r.ativacoes.length)).length), color:'#CBD5E0'},
     ]},
     digital: { datasets: [
       {label:'IG Ativo',       data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.ig_status==='ativo').length), color:'#6B21A8'},
       {label:'IG Inconstante', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.ig_status==='inconstante').length), color:'#A855F7'},
       {label:'IG Inativo',     data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.ig_status==='inativo').length), color:'#D8B4FE'},
     ]},
-    diversidade: { datasets: [
-      {label:'Com ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.inclusao==='acoes').length), color:'#EA580C'},
-      {label:'Sem ações', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.inclusao==='sem_acoes').length), color:'#FED7AA'},
-    ]},
     banco: { datasets: [
-      {label:'Alimentando',  data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.banco_jog==='sim').length), color:'#78350F'},
+      {label:'Alimentando',  data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.banco_jog==='sim').length), color:'#EA580C'},
       {label:'Não aliment.', data: months.map(m => HISTORICO.filter(r=>r.mes===m&&r.banco_jog!=='sim').length), color:'#CBD5E0'},
     ]},
   };
@@ -2502,16 +2810,17 @@ function updateChartFromHistorico() {
 }
 
 function initHistorico() {
-  const inp = document.getElementById('hist-new-month');
-  if (inp) inp.value = new Date().toISOString().slice(0,7);
-  activeMatrixMes = null;
-  document.getElementById('hist-view-months').style.display = 'flex';
-  document.getElementById('hist-view-matrix-bar').style.display = 'none';
-  document.getElementById('hist-legend-bar').style.display = 'none';
-  document.getElementById('hist-content-months').style.display = '';
-  document.getElementById('hist-content-matrix').style.display = 'none';
+  const curMes = new Date().toISOString().slice(0,7);
+  // Garante que o mês atual existe no histórico
+  ESTADOS.forEach(e => {
+    if (!HISTORICO.find(r=>r.uf===e.uf&&r.mes===curMes)) {
+      HISTORICO.push({mes:curMes, uf:e.uf, nome:e.nome||'', resp_com:'',
+        cnpj:'', ig_status:'', div:'',
+        ativacoes:[], banco_jog:'nao'});
+    }
+  });
   setHistCat('cnpj');
-  renderMonthCards();
+  renderHistoricoMatrix();
 }
 
 
