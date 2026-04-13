@@ -1946,6 +1946,7 @@ document.querySelectorAll('.nav-tab').forEach(t=>t.addEventListener('click',()=>
   document.getElementById('page-'+t.dataset.page).classList.add('active');
   if(t.dataset.page==='federacoes') setTimeout(renderMap,50);
   if(t.dataset.page==='historico') initHistorico();
+  if(t.dataset.page==='mapa') setTimeout(bmapInit,50);
 }));
 
 document.querySelectorAll('.viz-tab').forEach(t=>t.addEventListener('click',()=>{
@@ -2177,13 +2178,13 @@ function bmapInit() {
     BRAZIL_GEOJSON = { type: 'FeatureCollection', features };
     bmapDrawGeoJSON(BRAZIL_GEOJSON);
   })
-  .catch(err => {
+  .catch(function(err) {
     console.error('Erro ao carregar mapa IBGE:', err);
     document.getElementById('bmap-loading').innerHTML =
-      `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;font-weight:600;color:#B91C1C;display:flex;align-items:center;gap:10px;max-width:400px;text-align:center">
-        ⚠️ Erro ao carregar mapa: ${err.message}<br><br>
-        <button onclick="BRAZIL_GEOJSON=null;bmapInit()" style="background:var(--txt);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;margin-top:8px">Tentar novamente</button>
-      </div>`;
+      '<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;font-weight:600;color:#B91C1C">' +
+      '\u26A0\uFE0F Erro ao carregar mapa: ' + (err && err.message ? err.message : err) +
+      '<br><br><button onclick="BRAZIL_GEOJSON=null;bmapInit()" style="background:#0D1117;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer">Tentar novamente</button>' +
+      '</div>';
   });
 }
 
