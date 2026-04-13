@@ -2063,7 +2063,9 @@ function bmapScore(e) {
 
 function bmapDrawGeoJSON(geojson) {
   const container = document.getElementById('bmap-container');
-  const w = container.clientWidth, h = container.clientHeight;
+  const w = container.clientWidth || container.offsetWidth || 900;
+  const h = container.clientHeight || container.offsetHeight || 600;
+
   const svg = d3.select('#bmap-svg');
   svg.selectAll('*').remove();
 
@@ -2089,42 +2091,43 @@ function bmapDrawGeoJSON(geojson) {
     .enter().append('path')
     .attr('class', 'bmap-state')
     .attr('d', pathFn)
-    .attr('data-uf', d => d.properties.sigla)
-    .attr('fill', d => {
-      const e = ESTADOS.find(x => x.uf === d.properties.sigla);
+    .attr('data-uf', function(d){ return d.properties.sigla; })
+    .attr('fill', function(d){
+      var e = ESTADOS.find(function(x){ return x.uf === d.properties.sigla; });
       return viz.getColor(e);
     })
     .attr('stroke', '#fff')
     .attr('stroke-width', 0.8)
     .style('cursor', 'pointer')
     .on('mousemove', function(event, d) {
-      const sigla = d.properties.sigla;
-      const e = ESTADOS.find(x => x.uf === sigla);
-      const nome = e ? (e.nome||sigla).replace(/^(Fed\.|Federação)\s*/i,'') : sigla;
-      const cnpjLbl = {ativo:'CNPJ Ativo',regularizando:'Regularizando',inativo:'Inativo',seminfo:'Sem info'}[e?.cnpj||''] || '—';
-      const igLbl = {ativo:'IG Ativo',inconstante:'Inconstante',inativo:'Inativo'}[e?.ig_status||''] || '—';
-      const evts = (e?.ativacoes||[]).length;
-      const score = e ? bmapScore(e) : 0;
+      var sigla = d.properties.sigla;
+      var e = ESTADOS.find(function(x){ return x.uf === sigla; });
+      var nome = e ? (e.nome||sigla).replace(/^(Fed\.|Federação)\s*/i,'') : sigla;
+      var cnpjLbl = ({ativo:'CNPJ Ativo',regularizando:'Regularizando',inativo:'Inativo',seminfo:'Sem info'})[e && e.cnpj ? e.cnpj : ''] || '—';
+      var igLbl = ({ativo:'IG Ativo',inconstante:'Inconstante',inativo:'Inativo'})[e && e.ig_status ? e.ig_status : ''] || '—';
+      var evts = e && e.ativacoes ? e.ativacoes.length : 0;
+      var score = e ? bmapScore(e) : 0;
+      var respHtml = e && e.resp ? '<div style="font-size:10px;color:var(--txt2);margin-bottom:6px">\uD83D\uDC64 ' + e.resp + '</div>' : '';
+      var bancoTxt = e && e.banco_jog === 'sim' ? '\u2713 Sim' : '\u2014';
       tooltip.style.opacity = '1';
       tooltip.style.left = (event.clientX + 14) + 'px';
       tooltip.style.top  = (event.clientY - 10) + 'px';
-      tooltip.innerHTML = `
-        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--txt);margin-bottom:2px">${sigla}</div>
-        <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">${nome || 'Sem cadastro'}</div>
-        ${e?.resp ? `<div style="font-size:10px;color:var(--txt2);margin-bottom:6px">👤 ${e.resp}</div>` : ''}
-        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px">
-          <div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">CNPJ</span><span style="font-weight:600;color:var(--txt)">${cnpjLbl}</span></div>
-          <div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Instagram</span><span style="font-weight:600;color:var(--txt)">${igLbl}</span></div>
-          <div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Eventos</span><span style="font-weight:600;color:var(--txt)">${evts || '—'}</span></div>
-          <div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Banco Jog.</span><span style="font-weight:600;color:var(--txt)">${e?.banco_jog==='sim'?'✓ Sim':'—'}</span></div>
-          <div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Score</span><span style="font-weight:700;color:var(--txt)">${score}/6</span></div>
-        </div>
-      `;
-      d3.select(this).attr('fill', d3.color(viz.getColor(e))?.darker(0.3) || '#aaa');
+      tooltip.innerHTML =
+        '<div style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:15px;color:var(--txt);margin-bottom:2px">' + sigla + '</div>' +
+        '<div style="font-size:11px;color:var(--txt3);margin-bottom:8px">' + (nome || 'Sem cadastro') + '</div>' +
+        respHtml +
+        '<div style="display:flex;flex-direction:column;gap:4px;font-size:11px">' +
+          '<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">CNPJ</span><span style="font-weight:600;color:var(--txt)">' + cnpjLbl + '</span></div>' +
+          '<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Instagram</span><span style="font-weight:600;color:var(--txt)">' + igLbl + '</span></div>' +
+          '<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Eventos</span><span style="font-weight:600;color:var(--txt)">' + (evts || '—') + '</span></div>' +
+          '<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Banco Jog.</span><span style="font-weight:600;color:var(--txt)">' + bancoTxt + '</span></div>' +
+          '<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px"><span style="color:var(--txt3)">Score</span><span style="font-weight:700;color:var(--txt)">' + score + '/6</span></div>' +
+        '</div>';
+      d3.select(this).attr('fill', d3.color(viz.getColor(e)) ? d3.color(viz.getColor(e)).darker(0.3) : '#aaa');
     })
     .on('mouseleave', function(event, d) {
       tooltip.style.opacity = '0';
-      const e = ESTADOS.find(x => x.uf === d.properties.sigla);
+      var e = ESTADOS.find(function(x){ return x.uf === d.properties.sigla; });
       d3.select(this).attr('fill', viz.getColor(e));
     });
 
@@ -2132,7 +2135,7 @@ function bmapDrawGeoJSON(geojson) {
     .data(geojson.features)
     .enter().append('text')
     .attr('class', 'bmap-label')
-    .attr('transform', d => `translate(${pathFn.centroid(d)})`)
+    .attr('transform', function(d){ var c = pathFn.centroid(d); return 'translate(' + c[0] + ',' + c[1] + ')'; })
     .attr('text-anchor', 'middle')
     .attr('dy', '0.35em')
     .style('font-size', '9px')
@@ -2140,7 +2143,7 @@ function bmapDrawGeoJSON(geojson) {
     .style('fill', 'rgba(0,0,0,0.65)')
     .style('font-family', "'DM Mono',monospace")
     .style('pointer-events', 'none')
-    .text(d => d.properties.sigla);
+    .text(function(d){ return d.properties.sigla; });
 
   document.getElementById('bmap-loading').style.display = 'none';
   bmapRenderLegend();
@@ -2151,37 +2154,37 @@ function bmapInit() {
   document.getElementById('bmap-loading').style.display = 'flex';
   if (BRAZIL_GEOJSON) { bmapDrawGeoJSON(BRAZIL_GEOJSON); return; }
 
-  // Uma única chamada que retorna todos os estados com divisão por UF
-  // resolucao=2 = divide por UF, codarea na propriedade = código IBGE numérico
-  fetch('https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo+json&qualidade=minima&divisao=UF')
-    .then(r => r.json())
-    .then(gj => {
-      // Mapeia codarea (código numérico IBGE) → sigla UF
-      const codeToSigla = {};
-      Object.entries(UF_CODES).forEach(([sigla, cod]) => { codeToSigla[cod] = sigla; });
-      gj.features.forEach(f => {
-        const cod = parseInt(f.properties?.codarea || f.properties?.id || 0);
-        f.properties = { sigla: codeToSigla[cod] || f.properties?.codarea || '?' };
-      });
-      BRAZIL_GEOJSON = gj;
-      bmapDrawGeoJSON(BRAZIL_GEOJSON);
-    })
-    .catch(() => {
-      // Fallback: busca todos estados de uma vez via v3
-      Promise.all(
-        Object.entries(UF_CODES).map(([sigla, cod]) =>
-          fetch(`https://servicodados.ibge.gov.br/api/v3/malhas/estados/${cod}?formato=application/vnd.geo+json&qualidade=minima`)
-            .then(r => r.json())
-            .then(gj => { const f = gj.features[0]; f.properties = {sigla}; return f; })
-        )
-      ).then(features => {
-        BRAZIL_GEOJSON = {type:'FeatureCollection', features};
-        bmapDrawGeoJSON(BRAZIL_GEOJSON);
-      }).catch(() => {
-        document.getElementById('bmap-loading').innerHTML =
-          '<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;font-weight:600;color:#B91C1C;display:flex;align-items:center;gap:10px"><span>⚠️</span> Erro ao carregar mapa. Verifique a conexão.</div>';
-      });
-    });
+  // Usa a sigla diretamente na URL — funciona na API v3 do IBGE
+  const SIGLAS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
+  const BASE = 'https://servicodados.ibge.gov.br/api/v3/malhas/estados/';
+  const PARAMS = '?formato=application/vnd.geo+json&qualidade=minima';
+
+  Promise.all(
+    SIGLAS.map(sigla =>
+      fetch(BASE + sigla + PARAMS)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(gj => {
+          // A API retorna FeatureCollection — pega a primeira feature
+          const features = gj.features || (gj.type === 'Feature' ? [gj] : []);
+          if (!features.length) throw new Error('sem features para ' + sigla);
+          const f = features[0];
+          f.properties = { sigla };
+          return f;
+        })
+    )
+  )
+  .then(features => {
+    BRAZIL_GEOJSON = { type: 'FeatureCollection', features };
+    bmapDrawGeoJSON(BRAZIL_GEOJSON);
+  })
+  .catch(err => {
+    console.error('Erro ao carregar mapa IBGE:', err);
+    document.getElementById('bmap-loading').innerHTML =
+      `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;font-weight:600;color:#B91C1C;display:flex;align-items:center;gap:10px;max-width:400px;text-align:center">
+        ⚠️ Erro ao carregar mapa: ${err.message}<br><br>
+        <button onclick="BRAZIL_GEOJSON=null;bmapInit()" style="background:var(--txt);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;margin-top:8px">Tentar novamente</button>
+      </div>`;
+  });
 }
 
 function bmapSetViz(val) {
