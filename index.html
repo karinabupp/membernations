@@ -2071,7 +2071,20 @@ function bmapDrawGeoJSON(geojson) {
   svg.selectAll('*').remove();
 
   const projection = d3.geoMercator();
-  projection.fitExtent([[20, 20], [w - 20, h - 20]], { type: 'FeatureCollection', features: geojson.features });
+  // Bounding box fixo do Brasil: lon [-73.99, -28.85], lat [-33.75, 5.27]
+  // fitExtent com geometria conhecida garante escala correta
+  const brazilBounds = {
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[
+        [-73.99, -33.75], [-28.85, -33.75],
+        [-28.85, 5.27],  [-73.99, 5.27],
+        [-73.99, -33.75]
+      ]]
+    }
+  };
+  projection.fitExtent([[30, 20], [w - 30, h - 20]], brazilBounds);
   const pathFn = d3.geoPath().projection(projection);
   const g = svg.append('g');
   bmapGD3 = g;
