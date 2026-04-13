@@ -2070,11 +2070,8 @@ function bmapDrawGeoJSON(geojson) {
   const svg = d3.select('#bmap-svg');
   svg.selectAll('*').remove();
 
-  const projection = d3.geoMercator()
-    .center([-52, -14])
-    .scale(Math.min(w, h) * 1.32)
-    .translate([w / 2, h / 2]);
-
+  const projection = d3.geoMercator();
+  projection.fitExtent([[20, 20], [w - 20, h - 20]], { type: 'FeatureCollection', features: geojson.features });
   const pathFn = d3.geoPath().projection(projection);
   const g = svg.append('g');
   bmapGD3 = g;
