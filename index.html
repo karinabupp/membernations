@@ -2002,21 +2002,6 @@ const BRAZIL_GEOJSON_PLACEHOLDER = null;
 // Mapa: sigla → código IBGE
 const UF_CODES = {AC:12,AL:27,AM:13,AP:16,BA:29,CE:23,DF:53,ES:32,GO:52,MA:21,MG:31,MS:50,MT:51,PA:15,PB:25,PE:26,PI:22,PR:41,RJ:33,RN:24,RO:11,RR:14,RS:43,SC:42,SE:28,SP:35,TO:17};
 
-async function bmapLoadIBGE() {
-  const ufs = Object.entries(UF_CODES);
-  const BASE = 'https://servicodados.ibge.gov.br/api/v3/malhas/estados/';
-  const PARAMS = '?formato=application/vnd.geo+json&qualidade=minima';
-  const results = await Promise.all(ufs.map(async ([sigla, cod]) => {
-    const r = await fetch(BASE + cod + PARAMS);
-    const gj = await r.json();
-    // A API retorna FeatureCollection com 1 feature — extraímos e adicionamos sigla
-    const feat = gj.features[0];
-    feat.properties = { sigla };
-    return feat;
-  }));
-  return { type: 'FeatureCollection', features: results };
-}
-
 // Placeholder para não quebrar referências antes do load
 let BRAZIL_GEOJSON = null;
 const BMAP_VIZ = {
@@ -2166,22 +2151,37 @@ function bmapInit() {
   document.getElementById('bmap-loading').style.display = 'flex';
   if (BRAZIL_GEOJSON) { bmapDrawGeoJSON(BRAZIL_GEOJSON); return; }
 
-  const BASE = 'https://servicodados.ibge.gov.br/api/v3/malhas/estados/';
-  const PARAMS = '?formato=application/vnd.geo+json&qualidade=minima';
-
-  Promise.all(
-    Object.entries(UF_CODES).map(([sigla, cod]) =>
-      fetch(BASE + cod + PARAMS)
-        .then(r => r.json())
-        .then(gj => { const f = gj.features[0]; f.properties = {sigla}; return f; })
-    )
-  ).then(features => {
-    BRAZIL_GEOJSON = {type:'FeatureCollection', features};
-    bmapDrawGeoJSON(BRAZIL_GEOJSON);
-  }).catch(() => {
-    document.getElementById('bmap-loading').innerHTML =
-      '<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;font-weight:600;color:#B91C1C;display:flex;align-items:center;gap:10px"><span>⚠️</span> Sem internet. Abra o dashboard online para carregar o mapa.</div>';
-  });
+  // Uma única chamada que retorna todos os estados com divisão por UF
+  // resolucao=2 = divide por UF, codarea na propriedade = código IBGE numérico
+  fetch('https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo+json&qualidade=minima&divisao=UF')
+    .then(r => r.json())
+    .then(gj => {
+      // Mapeia codarea (código numérico IBGE) → sigla UF
+      const codeToSigla = {};
+      Object.entries(UF_CODES).forEach(([sigla, cod]) => { codeToSigla[cod] = sigla; });
+      gj.features.forEach(f => {
+        const cod = parseInt(f.properties?.codarea || f.properties?.id || 0);
+        f.properties = { sigla: codeToSigla[cod] || f.properties?.codarea || '?' };
+      });
+      BRAZIL_GEOJSON = gj;
+      bmapDrawGeoJSON(BRAZIL_GEOJSON);
+    })
+    .catch(() => {
+      // Fallback: busca todos estados de uma vez via v3
+      Promise.all(
+        Object.entries(UF_CODES).map(([sigla, cod]) =>
+          fetch(`https://servicodados.ibge.gov.br/api/v3/malhas/estados/${cod}?formato=application/vnd.geo+json&qualidade=minima`)
+            .then(r => r.json())
+            .then(gj => { const f = gj.features[0]; f.properties = {sigla}; return f; })
+        )
+      ).then(features => {
+        BRAZIL_GEOJSON = {type:'FeatureCollection', features};
+        bmapDrawGeoJSON(BRAZIL_GEOJSON);
+      }).catch(() => {
+        document.getElementById('bmap-loading').innerHTML =
+          '<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;font-weight:600;color:#B91C1C;display:flex;align-items:center;gap:10px"><span>⚠️</span> Erro ao carregar mapa. Verifique a conexão.</div>';
+      });
+    });
 }
 
 function bmapSetViz(val) {
